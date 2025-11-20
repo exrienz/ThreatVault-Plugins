@@ -1,0 +1,36 @@
+# Claude Code configuration
+CLAUDE.md
+
+# Blueprint and sensitive documentation
+blueprint.txt
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test outputs
+*.log
+test_results/
+
+# Temporary files
+*.tmp
+*.bak
