@@ -5,6 +5,7 @@ Welcome to the **ThreatVault Plugins Repository**! This is a community-driven co
 ## 📋 Table of Contents
 
 - [What is This Repository?](#what-is-this-repository)
+- [🤖 **AI-Assisted Plugin Generation (NEW!)**](#ai-assisted-plugin-generation)
 - [How to Contribute](#how-to-contribute)
 - [Prerequisites](#prerequisites)
 - [Understanding Plugin Types](#understanding-plugin-types)
@@ -44,6 +45,58 @@ ThreatVault needs security scan data in a specific format. Different security to
 ```
 
 **Anyone can contribute** by creating a plugin for their favorite security tool!
+
+---
+
+## 🤖 AI-Assisted Plugin Generation
+
+**NEW!** Don't want to write plugin code manually? Use our AI Plugin Generator!
+
+### Quick Start with AI
+
+1. **Get the AI Prompt**:
+   - Open [`PLUGIN_GENERATOR_PROMPT.md`](./PLUGIN_GENERATOR_PROMPT.md)
+   - Copy the entire "SYSTEM PROMPT FOR LLM" section
+
+2. **Use with Any LLM**:
+   - Paste the prompt into ChatGPT, Claude, or any LLM
+   - Upload your security tool's output file (CSV/JSON/XML)
+   - Specify tool name and whether it's VAPT or Compliance
+
+3. **Get Production-Ready Code**:
+   - The LLM generates complete plugin code
+   - Includes data type handling, null handling, validation
+   - Provides test script and usage instructions
+   - Ready to use immediately!
+
+### Example AI Conversation
+
+```
+[User]: I need a ThreatVault plugin for Acunetix Web Scanner.
+        Type: VAPT
+        Format: CSV
+        [Upload acunetix_scan.csv]
+
+[AI]: Analyzing your file... ✅
+
+      Generated complete plugin with:
+      - Proper port Integer conversion
+      - All null handling
+      - Risk value validation
+      - Test script included
+
+      [Provides full production-ready code]
+```
+
+### What the AI Generates
+
+✅ Complete `plugin.py` file with all transformations
+✅ Test script (`test_plugin.py`)
+✅ Installation and usage instructions
+✅ Pre-validated against all ThreatVault requirements
+✅ Ready for production use
+
+**See [`PLUGIN_GENERATOR_PROMPT.md`](./PLUGIN_GENERATOR_PROMPT.md) for complete instructions!**
 
 ---
 
@@ -89,17 +142,24 @@ ThreatVault supports two types of security data:
 **Key Question**: *"What security issues exist?"*
 
 **Required Fields**:
-| Field | Description | Example |
-|-------|-------------|---------|
-| `cve` | CVE identifier (if applicable) | `"CVE-2023-1234"` or `""` |
-| `risk` | Severity level | `"CRITICAL"`, `"HIGH"`, `"MEDIUM"`, `"LOW"` |
-| `host` | Target IP or hostname | `"192.168.1.100"` or `"webserver01"` |
-| `port` | Port number (use `0` if N/A) | `443` or `0` |
-| `name` | Vulnerability title | `"SQL Injection in Login Form"` |
-| `description` | Detailed explanation | `"The application is vulnerable to..."` |
-| `remediation` | How to fix it | `"Update to version 2.0 or apply patch"` |
-| `evidence` | Proof/scan output | `"POST /login vulnerable"` |
-| `vpr_score` | VPR score (optional) | `"8.2"` or `""` |
+| Field | Type | Required | Null Handling | Example |
+|-------|------|----------|---------------|---------|
+| `cve` | String | ✅ | Use `""` (empty string) if no CVE | `"CVE-2023-1234"` or `""` |
+| `risk` | String | ✅ | Must be valid value, no nulls | `"CRITICAL"`, `"HIGH"`, `"MEDIUM"`, `"LOW"` |
+| `host` | String | ✅ | Must have value, no nulls | `"192.168.1.100"` or `"webserver01"` |
+| `port` | **Integer** | ✅ | Use `0` for web apps or if N/A | `443`, `80`, `8080`, or `0` |
+| `name` | String | ✅ | Must have value, no nulls | `"SQL Injection in Login Form"` |
+| `description` | String | ✅ | Must have value, no nulls | `"The application is vulnerable to..."` |
+| `remediation` | String | ✅ | Must have value, no nulls | `"Update to version 2.0 or apply patch"` |
+| `evidence` | String | ⚪ Optional | Can be `""` (empty string) | `"POST /login vulnerable"` or `""` |
+| `vpr_score` | String | ⚪ Optional | Use `""` (empty string) if N/A | `"8.2"` or `""` |
+
+**⚠️ Critical Requirements**:
+- **Port must be Integer type**, not String (e.g., `0` not `"0"` or `null`)
+- **All required String fields** must not be null - use empty string `""` if no data
+- **Risk values** must be exactly: `CRITICAL`, `HIGH`, `MEDIUM`, or `LOW` (uppercase)
+- **CVE format** (if provided): `CVE-YYYY-NNNNN` or empty string `""`
+- **Newlines** in text fields should be replaced with `<br/>` for HTML display
 
 ### 2️⃣ Compliance
 
@@ -110,21 +170,28 @@ ThreatVault supports two types of security data:
 **Key Question**: *"Does this system comply with the rules?"*
 
 **Required Fields**:
-| Field | Description | Example |
-|-------|-------------|---------|
-| `risk` | Severity (can be None) | `"HIGH"`, `"MEDIUM"`, `"LOW"`, or `None` |
-| `host` | Target system | `"db-server-01"` |
-| `port` | Port (use `0` if N/A) | `0` |
-| `name` | Rule/control name | `"Password Length >= 8 Characters"` |
-| `description` | What the rule checks | `"Passwords must be at least 8 chars"` |
-| `remediation` | How to comply | `"Set minimum password length to 8"` |
-| `evidence` | Audit result | `"Current setting: 6 characters"` |
-| `status` | Compliance result | `"PASSED"`, `"FAILED"`, `"WARNING"` |
+| Field | Type | Required | Null Handling | Example |
+|-------|------|----------|---------------|---------|
+| `risk` | String | ⚪ Optional | Can be `None` (auto-assigned to `"MEDIUM"`) | `"HIGH"`, `"MEDIUM"`, `"LOW"`, or `None` |
+| `host` | String | ✅ | Must have value, no nulls | `"db-server-01"` or `"192.168.1.50"` |
+| `port` | **Integer** | ✅ | Use `0` if not applicable | `0`, `22`, `3306` |
+| `name` | String | ✅ | Must have value, no nulls | `"Password Length >= 8 Characters"` |
+| `description` | String | ✅ | Must have value, no nulls | `"Passwords must be at least 8 chars"` |
+| `remediation` | String | ✅ | Must have value, no nulls | `"Set minimum password length to 8"` |
+| `evidence` | String | ⚪ Optional | Can be `""` (empty string) | `"Current setting: 6 characters"` or `""` |
+| `status` | String | ✅ | Must be valid value, no nulls | `"PASSED"`, `"FAILED"`, `"WARNING"` |
 
-**Important Differences**:
-- VAPT uses `cve` and `vpr_score` → Compliance does **NOT**
-- VAPT uses `risk` for severity → Compliance uses `status` for pass/fail
-- Compliance `risk` can be `None` (auto-assigned to `"MEDIUM"`)
+**⚠️ Critical Requirements**:
+- **Port must be Integer type**, not String (e.g., `0` not `"0"` or `null`)
+- **Status values** must be exactly: `PASSED`, `FAILED`, or `WARNING` (uppercase)
+- **Risk field is optional** - if `None` or missing, ThreatVault assigns `"MEDIUM"`
+- **All required String fields** must not be null - use empty string `""` if no data
+- **Newlines** in text fields should be replaced with `<br/>` for HTML display
+
+**Important Differences from VAPT**:
+- Compliance does **NOT** use `cve` and `vpr_score` fields (VAPT only)
+- Compliance uses `status` for pass/fail results (VAPT uses `risk` for severity)
+- Compliance `risk` field is optional and can be `None`
 
 ---
 
@@ -230,35 +297,63 @@ def process(file: bytes, file_type: str) -> pl.LazyFrame:
     return lf
 ```
 
-#### Step 4: Handle Edge Cases
+#### Step 4: Handle Data Types and Null Values
 
-**Common scenarios to handle**:
+**⚠️ Critical: ThreatVault will reject uploads if data types are incorrect!**
+
+**Common scenarios you MUST handle**:
 
 ```python
-# Handle empty CVE fields
+# 1. Convert Port to Integer (REQUIRED - String ports will cause upload failures!)
+# Handle empty strings, nulls, and convert to integer type
 .with_columns(
-    pl.when(pl.col("cve").is_null())
-      .then(pl.lit(""))
-      .otherwise(pl.col("cve"))
-      .alias("cve")
+    pl.col("port")
+    .fill_null("0")              # Replace nulls with "0" string
+    .cast(pl.Utf8)               # Ensure string type first
+    .str.replace("^$", "0")      # Replace empty strings with "0"
+    .cast(pl.Int64, strict=False) # Convert to integer
+    .fill_null(0)                # Final safety: null → 0
+    .alias("port")
 )
 
-# Handle missing VPR scores
+# 2. Handle CVE field - use empty string if no CVE (not null!)
 .with_columns(
-    pl.when(pl.col("vpr_score").is_null())
-      .then(pl.lit(""))
-      .otherwise(pl.col("vpr_score"))
-      .alias("vpr_score")
+    pl.col("cve")
+    .fill_null("")        # Replace null with empty string
+    .cast(pl.Utf8)        # Ensure string type
+    .alias("cve")
 )
 
-# Convert port to integer
+# 3. Handle VPR Score - use empty string if not available (not null!)
 .with_columns(
-    pl.col("port").cast(pl.Int64, strict=False).fill_null(0)
+    pl.col("vpr_score")
+    .fill_null("")        # Replace null with empty string
+    .cast(pl.Utf8)        # Ensure string type
+    .alias("vpr_score")
 )
 
-# Filter out informational findings
+# 4. Ensure all required fields have values (no nulls)
+.with_columns([
+    pl.col("risk").fill_null("MEDIUM"),          # Default risk
+    pl.col("host").fill_null("unknown"),         # Default host
+    pl.col("name").fill_null("Unknown Issue"),   # Default name
+    pl.col("description").fill_null("No description available"),
+    pl.col("remediation").fill_null("No remediation available"),
+    pl.col("evidence").fill_null(""),            # Evidence can be empty
+])
+
+# 5. Filter out invalid risk values
+.filter(pl.col("risk").is_in(["CRITICAL", "HIGH", "MEDIUM", "LOW"]))
+
+# 6. Filter out informational findings (if needed)
 .filter(pl.col("risk") != "INFO")
 ```
+
+**Why This Matters**:
+- **Port as String → Upload fails with "cannot compare string with numeric type"**
+- **Null in required fields → Upload fails with validation error**
+- **Invalid risk values → Rows rejected or upload fails**
+- **Wrong data types → Infinite retry loop in ThreatVault**
 
 ### Compliance Plugin Development
 
@@ -441,14 +536,39 @@ python test_myplugin.py
 
 ### 3. Validation Checklist
 
-- ✅ Plugin loads and processes sample file without errors
-- ✅ Output schema exactly matches required fields
-- ✅ All required fields are populated (no nulls where not allowed)
-- ✅ `risk` values are valid: CRITICAL/HIGH/MEDIUM/LOW
-- ✅ `status` values (compliance) are valid: PASSED/FAILED/WARNING
-- ✅ Port numbers are integers (or 0)
-- ✅ Newlines are replaced with `<br/>`
-- ✅ Empty strings used instead of null for optional fields
+Before submitting your plugin, verify ALL of these requirements:
+
+**✅ Basic Functionality**
+- [ ] Plugin loads and processes sample file without errors
+- [ ] Output schema exactly matches required field names and order
+- [ ] Returns `pl.LazyFrame` or `pl.DataFrame` (not dict or list)
+
+**✅ Data Types (Critical!)**
+- [ ] `port` field is **Integer type** (`pl.Int64`), NOT String
+- [ ] All other fields are String type (`pl.Utf8`)
+- [ ] No mixed types in any column
+
+**✅ Null Handling (Critical!)**
+- [ ] Required fields have NO nulls (use defaults or empty strings)
+- [ ] `cve` uses empty string `""` if no CVE (not null)
+- [ ] `vpr_score` uses empty string `""` if not available (not null)
+- [ ] `evidence` can be empty string `""` but not null
+- [ ] `port` uses `0` for web apps or when not applicable (not null, not empty string)
+
+**✅ Value Validation**
+- [ ] VAPT: `risk` values are exactly `CRITICAL`, `HIGH`, `MEDIUM`, or `LOW` (uppercase)
+- [ ] Compliance: `status` values are exactly `PASSED`, `FAILED`, or `WARNING` (uppercase)
+- [ ] No invalid or informational severity levels in output
+
+**✅ Text Formatting**
+- [ ] Newlines (`\n`) are replaced with `<br/>` in description, remediation, evidence
+- [ ] Special characters are properly escaped or handled
+- [ ] Text truncation (if needed) doesn't break at arbitrary points
+
+**✅ Testing**
+- [ ] Test with sample file containing edge cases (nulls, empty values, special chars)
+- [ ] Verify output can be uploaded to ThreatVault without errors
+- [ ] Check that port column shows as integers (not `"0"` but `0`) when inspecting schema
 
 ---
 

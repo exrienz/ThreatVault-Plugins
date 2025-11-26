@@ -1,0 +1,518 @@
+# YesWeHack Bug Bounty Plugin for ThreatVault
+
+Transform YesWeHack bug bounty reports into ThreatVault-compatible format for centralized vulnerability management.
+
+---
+
+## 📋 Overview
+
+This package provides a complete workflow to extract bug bounty reports from YesWeHack and import them into ThreatVault:
+
+```
+YesWeHack API → ywh2csv.py → CSV Export → yeswehack.py Plugin → ThreatVault
+```
+
+**Components**:
+1. **`ywh2csv.py`** - Python script to pull data from YesWeHack API and export to CSV
+2. **`yeswehack.py`** - ThreatVault plugin to process CSV files for upload
+
+---
+
+## 🚀 Quick Start
+
+### Step 1: Export Data from YesWeHack API
+
+```bash
+# Set your YesWeHack API key
+export YWH_API_KEY="your-api-key-here"
+
+# Pull data from YesWeHack and export to CSV
+python3 ywh2csv.py business-slug-name program-slug-name -o output.csv
+```
+
+**Example**:
+```bash
+python3 ywh2csv.py example-company example-program -o reports.csv
+```
+
+### Step 2: Upload to ThreatVault
+
+1. Log into ThreatVault web interface
+2. Navigate to: **Scans** → **Upload Scan Results**
+3. Select Plugin: **YesWeHack Bug Bounty**
+4. Upload file: `output.csv`
+5. Click **Process**
+
+---
+
+## 📦 Component Details
+
+### 1. ywh2csv.py - YesWeHack Data Exporter
+
+**Purpose**: Pulls bug bounty reports from YesWeHack API and exports them to CSV format compatible with ThreatVault.
+
+#### Installation
+
+```bash
+# Install required dependencies
+pip install requests polars python-dotenv
+
+# Set up API credentials
+export YWH_API_KEY="your-yeswehack-api-key"
+```
+
+Or create a `.env` file:
+```bash
+# .env
+YWH_API_KEY=your-yeswehack-api-key
+```
+
+#### Usage
+
+**Basic Command**:
+```bash
+python3 ywh2csv.py BUSINESS_SLUG PROGRAM_SLUG -o output.csv
+```
+
+**Parameters**:
+- `BUSINESS_SLUG` - Your YesWeHack business unit slug (e.g., `example-company`)
+- `PROGRAM_SLUG` - Your bug bounty program slug (e.g., `example-program`)
+- `-o, --output` - Output CSV file path (required)
+
+**Example**:
+```bash
+python3 ywh2csv.py example-company example-program -o reports.csv
+```
+
+#### Additional Options
+
+**List Available Business Units**:
+```bash
+python3 ywh2csv.py --list-business-units
+```
+
+Output:
+```
+Available Business Units:
+------------------------------------------------------------
+Slug: example-company
+Name: Example Company Inc
+Programs: 3
+------------------------------------------------------------
+```
+
+**List Programs in a Business Unit**:
+```bash
+python3 ywh2csv.py --list-programs example-company
+```
+
+Output:
+```
+Available Programs in 'example-company':
+------------------------------------------------------------
+Slug: example-program
+Title: Example Bug Bounty Program
+Status: running
+------------------------------------------------------------
+```
+
+**Export Multiple Programs**:
+```bash
+python3 ywh2csv.py business-slug program1 program2 program3 -o combined-reports.csv
+```
+
+**Export All Reports (No Filtering)**:
+```bash
+python3 ywh2csv.py business-slug program-slug -o reports.csv --no-filter
+```
+
+**Skip Fetching Report Details (Faster)**:
+```bash
+python3 ywh2csv.py business-slug program-slug -o reports.csv --no-details
+```
+
+**Verbose Mode**:
+```bash
+python3 ywh2csv.py business-slug program-slug -o reports.csv -v
+```
+
+#### Filtering Behavior
+
+By default, `ywh2csv.py` only exports reports that meet these criteria:
+- ✅ `workflow_state = 'accepted'`
+- ✅ `ask_for_fix_verification_status = 'PENDING'`
+
+This ensures only verified, actionable vulnerabilities are imported into ThreatVault.
+
+To export all reports regardless of status:
+```bash
+python3 ywh2csv.py business-slug program-slug -o reports.csv --no-filter
+```
+
+#### CSV Output Format
+
+**Headers**:
+```
+CVE,Risk,Host,Port,Name,Description,Solution,Plugin Output,VPR Score
+```
+
+**Sample Output**:
+```csv
+CVE,Risk,Host,Port,Name,Description,Solution,Plugin Output,VPR Score
+#YWH-12345-1,HIGH,app.example.com,0,SQL Injection in Login Form,The application is vulnerable to SQL injection...,Use parameterized queries for all database operations.,,
+#YWH-12345-2,CRITICAL,api.example.com,0,Authentication Bypass,JWT tokens can be forged...,Implement strong JWT secret rotation.,,
+```
+
+**Field Mappings**:
+| CSV Column | YesWeHack API Field | Notes |
+|------------|---------------------|-------|
+| CVE | `local_id` | Bug bounty report ID (e.g., `#YWH-12345-1`) |
+| Risk | `criticity` | Mapped to CRITICAL/HIGH/MEDIUM/LOW |
+| Host | `scope` | Cleaned hostname/URL |
+| Port | N/A | Always `0` for web applications |
+| Name | `title` | Vulnerability title |
+| Description | `description_html` | Full description with `<br/>` tags |
+| Solution | `remediation_link` | Fix instructions/guidance |
+| Plugin Output | N/A | Empty (reserved field) |
+| VPR Score | N/A | Empty (not applicable for bug bounty) |
+
+---
+
+### 2. yeswehack.py - ThreatVault Plugin
+
+**Purpose**: Processes CSV files generated by `ywh2csv.py` and transforms them into ThreatVault's standardized VAPT format.
+
+This plugin is **automatically called by ThreatVault** when you upload a CSV file. You don't run this script manually.
+
+#### How It Works
+
+When you upload a CSV to ThreatVault:
+
+1. ThreatVault detects it's a YesWeHack CSV
+2. Calls `yeswehack.py` plugin's `process()` function
+3. Plugin transforms the data:
+   - Converts Port from String `"0"` → Integer `0`
+   - Preserves bug bounty report IDs in CVE field
+   - Validates risk values (CRITICAL/HIGH/MEDIUM/LOW)
+   - Ensures no null values in required fields
+   - Renames columns to ThreatVault schema
+
+4. Returns DataFrame with exact ThreatVault VAPT schema
+5. ThreatVault validates and imports the data
+
+#### Data Transformations
+
+**Schema Transformation**:
+```
+Input CSV:    CVE, Risk, Host, Port, Name, Description, Solution, Plugin Output, VPR Score
+                ↓     ↓     ↓     ↓     ↓        ↓           ↓           ↓          ↓
+Output:       cve, risk, host, port, name, description, remediation, evidence, vpr_score
+```
+
+**Key Transformations**:
+1. ✅ **Port**: String `"0"` → Integer `0` (CRITICAL for upload success)
+2. ✅ **CVE**: Preserves bug bounty IDs (e.g., `#YWH-12345-1`)
+3. ✅ **Solution → Remediation**: Column rename
+4. ✅ **Plugin Output → Evidence**: Column rename (empty value)
+5. ✅ **Null Handling**: All nulls converted to appropriate defaults
+6. ✅ **Risk Validation**: Only valid values (CRITICAL/HIGH/MEDIUM/LOW)
+
+**Output Schema**:
+```python
+{
+    "cve": "#YWH-12345-1",          # String - Bug bounty report ID
+    "risk": "HIGH",                 # String - Severity level
+    "host": "api.example.com",      # String - Target hostname
+    "port": 0,                      # Integer - Port number (0 for web apps)
+    "name": "SQL Injection",        # String - Vulnerability title
+    "description": "Details...",    # String - Full description
+    "remediation": "Fix...",        # String - Solution/fix
+    "evidence": "",                 # String - Empty (reserved)
+    "vpr_score": ""                 # String - Empty (not applicable)
+}
+```
+
+---
+
+## 🔍 Field Reference
+
+### YesWeHack API → CSV → ThreatVault
+
+| YesWeHack Field | CSV Column | ThreatVault Field | Type | Required | Example |
+|-----------------|------------|-------------------|------|----------|---------|
+| `local_id` | CVE | `cve` | String | ✅ | `#YWH-12345-1` |
+| `criticity` | Risk | `risk` | String | ✅ | `HIGH` |
+| `scope` | Host | `host` | String | ✅ | `api.example.com` |
+| N/A | Port | `port` | **Integer** | ✅ | `0` |
+| `title` | Name | `name` | String | ✅ | `SQL Injection` |
+| `description_html` | Description | `description` | String | ✅ | `The application...` |
+| `remediation_link` | Solution | `remediation` | String | ✅ | `Use parameterized...` |
+| N/A | Plugin Output | `evidence` | String | ⚪ | `""` (empty) |
+| N/A | VPR Score | `vpr_score` | String | ⚪ | `""` (empty) |
+
+**Key Notes**:
+- ⚠️ **Port MUST be Integer type** - This is critical for ThreatVault upload
+- ⚠️ **CVE contains bug bounty IDs** - Not standard CVE format (CVE-YYYY-NNNNN)
+- ⚠️ **Risk values must be uppercase** - CRITICAL, HIGH, MEDIUM, LOW only
+- ⚠️ **Evidence is empty** - Reserved field, not used for bug bounty reports
+
+---
+
+## 🛠️ Troubleshooting
+
+### Issue: "API key not found"
+
+**Error**:
+```
+ERROR: API key not found. Set YWH_API_KEY environment variable
+```
+
+**Solution**:
+```bash
+# Option 1: Export environment variable
+export YWH_API_KEY="your-api-key-here"
+
+# Option 2: Create .env file
+echo "YWH_API_KEY=your-api-key-here" > .env
+```
+
+### Issue: "File type not supported: csv"
+
+**Error**:
+```
+File type not supported: csv. Expected: text/csv
+```
+
+**Solution**:
+This has been fixed in the latest version. Update `yeswehack.py` to accept both `"csv"` and `"text/csv"`.
+
+**Fixed in**: v1.0.1+
+
+### Issue: Upload fails with "infinite retry loop"
+
+**Cause**: Data validation failures (port type, null values, invalid risk)
+
+**Solution**:
+Regenerate CSV using ywh2csv.py:
+```bash
+python3 ywh2csv.py business-slug program-slug -o new-output.csv
+```
+
+The latest version of the plugin handles all data transformations automatically.
+
+### Issue: "No reports found"
+
+**Error**:
+```
+No reports found for program: program-slug
+```
+
+**Possible Causes**:
+1. Wrong program slug - Check with `--list-programs`
+2. No reports in the program yet
+3. All reports filtered out (not accepted/pending)
+
+**Solution**:
+```bash
+# List available programs
+python3 ywh2csv.py --list-programs business-slug
+
+# Export all reports without filtering
+python3 ywh2csv.py business-slug program-slug -o output.csv --no-filter
+```
+
+### Issue: "Cannot filter report - detailed report not fetched"
+
+**Warning**:
+```
+Cannot filter report #YWH-xxx - detailed report not fetched.
+Filtering requires --no-details flag to be OFF.
+```
+
+**Cause**: Using `--no-details` flag with filtering enabled
+
+**Solution**:
+Either disable filtering OR enable detail fetching:
+```bash
+# Option 1: Disable filtering (export all reports)
+python3 ywh2csv.py business-slug program-slug -o output.csv --no-filter --no-details
+
+# Option 2: Enable detail fetching (slower but more data)
+python3 ywh2csv.py business-slug program-slug -o output.csv
+```
+
+---
+
+## 📊 Complete Workflow Example
+
+### Scenario: Export bug bounty reports to ThreatVault
+
+**Step 1: Set up credentials**
+```bash
+export YWH_API_KEY="your-yeswehack-api-key-here"
+```
+
+**Step 2: List available programs**
+```bash
+python3 ywh2csv.py --list-programs example-company
+```
+
+Output:
+```
+Available Programs in 'example-company':
+------------------------------------------------------------
+Slug: example-program
+Title: Example Bug Bounty Program
+Status: running
+------------------------------------------------------------
+```
+
+**Step 3: Export reports**
+```bash
+python3 ywh2csv.py example-company example-program -o reports.csv
+```
+
+Output:
+```
+============================================================
+Processing program: example-program
+============================================================
+Retrieved 10 reports (total: 10)
+Total reports retrieved for example-program: 10
+
+[1/10] Fetching details for report #YWH-12345-1...
+[2/10] Fetching details for report #YWH-12345-2...
+...
+============================================================
+Successfully exported 6 reports to reports.csv
+Skipped 4 reports (workflow_state != 'accepted' OR fix_verification_status != 'PENDING')
+============================================================
+```
+
+**Step 4: Upload to ThreatVault**
+1. Open ThreatVault web interface
+2. Navigate to: Scans → Upload Scan Results
+3. Select Plugin: YesWeHack Bug Bounty
+4. Upload: `reports.csv`
+5. Click: Process
+
+**Step 5: Verify import**
+- Check ThreatVault dashboard for new vulnerabilities
+- Verify CVE field contains bug bounty IDs (#YWH-12345-xx)
+- Confirm risk levels and hosts are correct
+
+---
+
+## 📝 CSV Format Example
+
+**Input** (generated by ywh2csv.py):
+```csv
+CVE,Risk,Host,Port,Name,Description,Solution,Plugin Output,VPR Score
+#YWH-12345-1,MEDIUM,app.example.com,0,Race Condition in Payment Processing,The application has a race condition vulnerability in the payment processing flow.<br/>This allows attackers to manipulate transaction states.,Apply proper locking mechanisms and implement idempotency tokens for payment transactions.,,
+#YWH-12345-2,HIGH,app.example.com,0,CSRF Token Bypass,Cross-site request forgery protection can be bypassed using a specific attack vector.<br/>This allows unauthorized actions on behalf of authenticated users.,Implement proper CSRF token validation with SameSite cookie attributes and Origin header verification.,,
+```
+
+**Output** (processed by yeswehack.py for ThreatVault):
+```python
+[
+    {
+        "cve": "#YWH-12345-1",
+        "risk": "MEDIUM",
+        "host": "app.example.com",
+        "port": 0,  # Integer type
+        "name": "Race Condition in Payment Processing",
+        "description": "The application has a race condition vulnerability...",
+        "remediation": "Apply proper locking mechanisms...",
+        "evidence": "",
+        "vpr_score": ""
+    },
+    {
+        "cve": "#YWH-12345-2",
+        "risk": "HIGH",
+        "host": "app.example.com",
+        "port": 0,  # Integer type
+        "name": "CSRF Token Bypass",
+        "description": "Cross-site request forgery protection...",
+        "remediation": "Implement proper CSRF token validation...",
+        "evidence": "",
+        "vpr_score": ""
+    }
+]
+```
+
+---
+
+## 🔗 Related Documentation
+
+- **ThreatVault Plugin Guide**: `../../../README.md`
+- **Technical Specification**: `../../../blueprint.txt`
+- **AI Plugin Generator**: `../../../PLUGIN_GENERATOR_PROMPT.md`
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+```bash
+# Required
+YWH_API_KEY=your-yeswehack-api-key
+
+# Optional (defaults shown)
+# YWH_BASE_URL=https://api.yeswehack.com
+```
+
+### ywh2csv.py Command Reference
+
+```bash
+# Full command syntax
+python3 ywh2csv.py [OPTIONS] BUSINESS_SLUG PROGRAM_SLUG [PROGRAM_SLUG...]
+
+# Required
+BUSINESS_SLUG              Business unit slug
+PROGRAM_SLUG               One or more program slugs
+-o, --output FILE          Output CSV file path
+
+# Optional
+--list-business-units      List all business units and exit
+--list-programs SLUG       List programs for a business unit
+-v, --verbose              Enable verbose logging
+--no-details               Skip fetching report details (faster)
+--no-filter                Export all reports (no status filtering)
+-b, --business-unit SLUG   Business unit slug (for listing)
+```
+
+---
+
+## 📋 Checklist for Production Use
+
+Before using in production:
+
+- [ ] YesWeHack API key configured (`YWH_API_KEY`)
+- [ ] Dependencies installed (`requests`, `polars`, `python-dotenv`)
+- [ ] Business unit and program slugs verified
+- [ ] CSV export successful with `ywh2csv.py`
+- [ ] ThreatVault plugin configured (yeswehack.py)
+- [ ] Test upload completed successfully
+- [ ] Data appears correctly in ThreatVault dashboard
+- [ ] Bug bounty IDs trackable in CVE field
+
+---
+
+## 🙏 Support
+
+For issues or questions:
+1. Check troubleshooting section above
+2. Review field mappings and transformations
+3. Check YesWeHack API documentation
+4. Open issue on GitHub repository
+
+---
+
+**Version**: 1.0.1
+**Last Updated**: 2025-11-26
+**Status**: Production Ready ✅
+
+**Changelog**:
+- v1.0.1: Fixed file type validation to accept both "csv" and "text/csv"
+- v1.0.0: Initial release with ywh2csv.py exporter and yeswehack.py plugin

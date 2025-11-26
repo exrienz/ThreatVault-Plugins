@@ -35,3 +35,5 @@ test_results/
 # Temporary files
 *.tmp
 *.bak
+*.env
+CLAUDE.md
