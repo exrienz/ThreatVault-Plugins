@@ -62,6 +62,34 @@ Code: query = f'SELECT...'
 
 ## Usage
 
+### Quick Start with Docker
+
+No installation needed! Just run the pre-built Docker image:
+
+**1. Pull the Image**
+
+```bash
+docker pull exrienz/threatcode:latest
+```
+
+**2. Run a Scan**
+
+Navigate to your project folder and run:
+
+```bash
+docker run --rm \
+  -v $(pwd):/scan \
+  -e LLM_PROVIDER=openrouter \
+  -e OPENROUTER_API_KEY=YOUR_API_KEY \
+  -e OPENROUTER_MODEL=anthropic/claude-3-haiku \
+  exrienz/threatcode:latest scan \
+  --input /scan \
+  --output /scan \
+  --name "your-domain.com"
+```
+
+**Tip**: Replace the `--name` value with your domain name (e.g., `api.example.com`) or repository name (e.g., `github.com/org/repo`) for better organization in ThreatVault.
+
 ### Python Import
 
 ```python
