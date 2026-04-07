@@ -139,6 +139,37 @@ Important difference:
 - VAPT uses `cve` and `vpr_score`.
 - Compliance does not.
 
+## Consistency Rules
+
+Apply these rules across plugins unless a tool has a documented exception.
+
+### Host format
+
+To keep output consistent, set `host` to one of these formats only:
+
+- IP address, such as `192.168.1.10`
+- URL, such as `https://example.com/vuln_endpoint.php`
+- repository identifier, such as `repo-name:branch-name`
+
+Do not mix in other free-form labels when one of the formats above is available.
+
+### Duplicate finding names across different severities
+
+Some tools, especially SCA tools, may emit findings with the same `name` but different severity levels. Avoid sending ambiguous names when you can make them clearer.
+
+Preferred approach:
+
+- add a stable identifier at the beginning of the finding name
+- use the CVE if available
+
+Example:
+
+```text
+CVE-2023-1234 Finding A
+```
+
+This makes similarly named findings easier to distinguish in ThreatVault while keeping the original finding title recognizable.
+
 ## Five Rules That Break Plugins Most Often
 
 If you remember only five things, remember these:
