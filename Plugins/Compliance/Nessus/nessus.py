@@ -14,10 +14,17 @@ def process(file: bytes, file_type: str) -> pl.LazyFrame:
             .str.extract(r"^(?:.*\n){2}((?s).*?)(?:^Actual Value:|$)", 1)
             .str.replace(pattern2, "")
             .str.replace_all("\n", "<br/>"),
-            evidence=pl.col("Description")
-            .str.extract(pattern2)
-            .str.replace_all("\n", "<br/>")
-            .str.strip_chars(),
+            evidence=pl.when(
+                pl.col("Description").str.extract(pattern2).is_null() |
+                (pl.col("Description").str.extract(pattern2).str.strip_chars() == "")
+            )
+            .then(pl.lit("no evidence provided"))
+            .otherwise(
+                pl.col("Description")
+                .str.extract(pattern2)
+                .str.replace_all("\n", "<br/>")
+                .str.strip_chars()
+            ),
             risk=pl.lit(None, dtype=pl.String),
         )
         .filter(pl.col("Risk") != "None", pl.col("Risk").is_not_null())

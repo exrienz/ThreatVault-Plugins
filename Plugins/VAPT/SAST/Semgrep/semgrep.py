@@ -21,12 +21,14 @@ def process(file: bytes, file_type: str) -> pl.DataFrame:
     Returns:
         pl.DataFrame: DataFrame with ThreatVault schema fields:
             - cve: CVE identifier (empty for Semgrep)
-            - risk: Severity level (defaults to 'Medium')
+            - risk: Severity level mapped from Semgrep severity:
+                    ERROR -> HIGH, WARNING -> MEDIUM, INFO -> LOW
+                    Upgraded to CRITICAL if metadata.impact is CRITICAL
             - host: Target host (set to 'semgrep' for static analysis)
             - port: Line number where issue was found
             - name: Rule/check identifier
             - description: Issue description/message
-            - remediation: Suggested fix
+            - remediation: Suggested fix (or default message if none provided)
             - evidence: Location information (file path and line numbers)
             - vpr_score: VPR score (empty for Semgrep)
 
@@ -56,18 +58,41 @@ def process(file: bytes, file_type: str) -> pl.DataFrame:
         message = extra.get('message', '')
         fix = extra.get('fix', '')
 
+        # Map Semgrep severity to ThreatVault risk levels
+        semgrep_severity = extra.get('severity', 'INFO')
+        metadata = extra.get('metadata', {})
+        impact = metadata.get('impact', '')
+
+        # Primary mapping: use Semgrep severity
+        # ERROR -> HIGH, WARNING -> MEDIUM, INFO -> LOW
+        risk_mapping = {
+            'ERROR': 'HIGH',
+            'WARNING': 'MEDIUM',
+            'INFO': 'LOW'
+        }
+        risk = risk_mapping.get(semgrep_severity, 'MEDIUM')
+
+        # Secondary refinement: if metadata.impact is CRITICAL or HIGH, upgrade
+        if impact == 'CRITICAL':
+            risk = 'CRITICAL'
+        elif impact == 'HIGH' and risk == 'MEDIUM':
+            risk = 'HIGH'
+
         # Build evidence string: "Line start_line - end_line in file : path"
         evidence = f"Line {start_line} - {end_line} in file : {path}"
+
+        # Ensure remediation has content, use placeholder if empty
+        remediation = fix if fix else 'Review and address the security finding according to best practices.'
 
         # Create the record
         record = {
             'cve': '',
-            'risk': 'Medium',
+            'risk': risk,
             'host': 'semgrep',
             'port': start_line,
             'name': check_id,
             'description': message,
-            'remediation': fix,
+            'remediation': remediation,
             'evidence': evidence,
             'vpr_score': ''
         }

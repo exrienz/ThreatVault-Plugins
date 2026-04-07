@@ -2,8 +2,10 @@
 ThreatVault Plugin for Trivy JSON Results
 
 This plugin converts Trivy JSON scan results to ThreatVault VAPT format.
-It supports both legacy format ({"vulnerabilities": [...]}) and modern format
-({"Results": [...]}).
+It supports three formats:
+- GitLab Container Scanning format: {"vulnerabilities": [...]}
+- Modern Trivy format: {"Results": [...]}
+- CycloneDX SBOM format: {"bomFormat": "CycloneDX", "vulnerabilities": [...]}
 """
 
 import json
@@ -13,6 +15,11 @@ import polars as pl
 def process(file: bytes, file_type: str) -> pl.DataFrame:
     """
     Process Trivy JSON results and convert to ThreatVault format.
+
+    Supports three input formats:
+        - CycloneDX SBOM: {"bomFormat": "CycloneDX", "vulnerabilities": [...]}
+        - GitLab Container Scanning: {"vulnerabilities": [...]}
+        - Modern Trivy: {"Results": [...]}
 
     Args:
         file: The uploaded file content as bytes
@@ -27,7 +34,7 @@ def process(file: bytes, file_type: str) -> pl.DataFrame:
             - name: Package name or CVE ID
             - description: Vulnerability description
             - remediation: Fixed version or solution
-            - evidence: Additional context (empty string)
+            - evidence: Installed version (format: "Installed version : $version")
             - vpr_score: VPR score (empty string)
 
     Raises:
@@ -43,8 +50,15 @@ def process(file: bytes, file_type: str) -> pl.DataFrame:
     # Prepare data for DataFrame
     records = []
 
-    # Check for legacy format: {"vulnerabilities": [...]}
-    if "vulnerabilities" in data:
+    # Check for CycloneDX format: {"bomFormat": "CycloneDX", "vulnerabilities": [...]}
+    if data.get("bomFormat") == "CycloneDX":
+        image = data.get("metadata", {}).get("component", {}).get("name", "")
+        vulnerabilities = data.get("vulnerabilities", [])
+        for vuln in vulnerabilities:
+            records.append(_parse_cyclonedx_vulnerability(vuln, image))
+
+    # Check for GitLab Container Scanning format: {"vulnerabilities": [...]}
+    elif "vulnerabilities" in data:
         for vuln in data["vulnerabilities"]:
             records.append(_parse_legacy_vulnerability(vuln, data))
 
@@ -63,7 +77,7 @@ def process(file: bytes, file_type: str) -> pl.DataFrame:
 
     else:
         raise ValueError(
-            "Unsupported Trivy JSON format. Expected 'vulnerabilities' or 'Results' key."
+            "Unsupported Trivy JSON format. Expected 'vulnerabilities', 'Results', or CycloneDX format."
         )
 
     # Create Polars DataFrame
@@ -101,6 +115,9 @@ def process(file: bytes, file_type: str) -> pl.DataFrame:
     # Filter out invalid risk values
     valid_risks = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
     df = df.filter(pl.col("risk").is_in(valid_risks))
+
+    # Filter out findings with no solution provided
+    df = df.filter(pl.col("remediation") != "No fix available")
 
     return df
 
@@ -142,6 +159,12 @@ def _parse_legacy_vulnerability(vuln: dict, data: dict) -> dict:
     if not solution or solution == "No solution provided":
         solution = "No fix available"
 
+    # Extract version for evidence
+    version = ""
+    if "location" in vuln and "dependency" in vuln["location"]:
+        version = vuln["location"]["dependency"].get("version", "")
+    evidence = f"Installed version : {version}" if version else ""
+
     return {
         'cve': cve_id,
         'risk': severity,
@@ -150,7 +173,7 @@ def _parse_legacy_vulnerability(vuln: dict, data: dict) -> dict:
         'name': name,
         'description': description,
         'remediation': solution,
-        'evidence': '',
+        'evidence': evidence,
         'vpr_score': ''
     }
 
@@ -187,6 +210,10 @@ def _parse_modern_vulnerability(vuln: dict, target: str) -> dict:
     else:
         solution = "No fix available"
 
+    # Extract installed version for evidence
+    installed_version = vuln.get("InstalledVersion", "")
+    evidence = f"Installed version : {installed_version}" if installed_version else ""
+
     return {
         'cve': cve_id,
         'risk': severity,
@@ -195,6 +222,105 @@ def _parse_modern_vulnerability(vuln: dict, target: str) -> dict:
         'name': package_name,
         'description': description,
         'remediation': solution,
-        'evidence': '',
+        'evidence': evidence,
+        'vpr_score': ''
+    }
+
+
+def _parse_purl(purl: str) -> tuple[str, str]:
+    """
+    Parse a Package URL (purl) to extract package name and version.
+
+    Args:
+        purl: Package URL string (e.g., "pkg:deb/debian/linux-libc-dev@6.1.159-1?arch=amd64")
+
+    Returns:
+        tuple: (package_name, version)
+    """
+    # Remove query string
+    if '?' in purl:
+        purl = purl.split('?')[0]
+
+    # Extract version after @
+    version = ""
+    if '@' in purl:
+        purl, version = purl.rsplit('@', 1)
+        # URL decode the version (e.g., %2B -> +)
+        from urllib.parse import unquote
+        version = unquote(version)
+
+    # Extract package name (last component after /)
+    package_name = purl.rsplit('/', 1)[-1] if '/' in purl else purl
+
+    return package_name, version
+
+
+def _parse_cyclonedx_vulnerability(vuln: dict, image: str) -> dict:
+    """
+    Parse a vulnerability from CycloneDX SBOM format.
+
+    Args:
+        vuln: Individual vulnerability record from CycloneDX
+        image: Container image name from metadata
+
+    Returns:
+        dict: Parsed vulnerability record
+    """
+    # Extract CVE ID
+    cve_id = vuln.get("id", "")
+
+    # Extract severity from ratings (prefer NVD, then first available)
+    severity = ""
+    ratings = vuln.get("ratings", [])
+    for rating in ratings:
+        source_name = rating.get("source", {}).get("name", "").lower()
+        if source_name == "nvd":
+            severity = rating.get("severity", "")
+            break
+    if not severity and ratings:
+        severity = ratings[0].get("severity", "")
+
+    # Extract description
+    description = vuln.get("description", "")
+
+    # Extract package name and version from affects
+    package_name = ""
+    version = ""
+    affects = vuln.get("affects", [])
+    if affects:
+        ref = affects[0].get("ref", "")
+        if ref:
+            package_name, version = _parse_purl(ref)
+        # Also check versions array
+        versions = affects[0].get("versions", [])
+        if versions and not version:
+            version = versions[0].get("version", "")
+
+    # Build evidence
+    evidence = f"Installed version : {version}" if version else ""
+
+    # Remediation - extract only the relevant recommendation for this package
+    solution = "No fix available"
+    recommendation = vuln.get("recommendation", "")
+    if recommendation and package_name:
+        # Recommendation format: "Upgrade pkg1 to version X; Upgrade pkg2 to version Y"
+        # Extract only the part matching this package
+        for part in recommendation.split("; "):
+            if package_name in part:
+                solution = part.strip()
+                break
+        # Fallback to full recommendation if no match found
+        if solution == "No fix available" and recommendation:
+            solution = recommendation
+
+    return {
+        'cve': cve_id,
+        'risk': severity,
+        'host': image,
+        'port': 0,
+        'name': package_name or cve_id,
+        'description': description,
+        'remediation': solution,
+        'evidence': evidence,
         'vpr_score': ''
     }

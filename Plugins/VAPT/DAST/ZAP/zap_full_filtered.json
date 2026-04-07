@@ -1,0 +1,1237 @@
+{
+  "target": "http://testphp.vulnweb.com/",
+  "scan_time": "2026-03-06T06:59:24+0800",
+  "total_findings": 20,
+  "findings": [
+    {
+      "severity": "High",
+      "name": "Cross Site Scripting (Reflected)",
+      "description": "<p>Cross-site Scripting (XSS) is an attack technique that involves echoing attacker-supplied code into a user's browser instance. A browser instance can be a standard web browser client, or a browser object embedded in a software product such as the browser within WinAmp, an RSS reader, or an email client. The code itself is usually written in HTML/JavaScript, but may also extend to VBScript, ActiveX, Java, Flash, or any other browser-supported technology.</p><p>When an attacker gets a user's browser to execute his/her code, the code will run within the security context (or zone) of the hosting web site. With this level of privilege, the code has the ability to read, modify and transmit any sensitive data accessible by the browser. A Cross-site Scripted user could have his/her account hijacked (cookie theft), their browser redirected to another location, or possibly shown fraudulent content delivered by the web site they are visiting. Cross-site Scripting attacks essentially compromise the trust relationship between a user and the web site. Applications utilizing browser object instances which load content from the file system may execute code under the local machine zone allowing for system compromise.</p><p></p><p>There are three types of Cross-site Scripting attacks: non-persistent, persistent and DOM-based.</p><p>Non-persistent attacks and DOM-based attacks require a user to either visit a specially crafted link laced with malicious code, or visit a malicious web page containing a web form, which when posted to the vulnerable site, will mount the attack. Using a malicious form will oftentimes take place when the vulnerable resource only accepts HTTP POST requests. In such a case, the form can be submitted automatically, without the victim's knowledge (e.g. by using JavaScript). Upon clicking on the malicious link or submitting the malicious form, the XSS payload will get echoed back and will get interpreted by the user's browser and execute. Another technique to send almost arbitrary requests (GET and POST) is by using an embedded client, such as Adobe Flash.</p><p>Persistent attacks occur when the malicious code is submitted to a web site where it's stored for a period of time. Examples of an attacker's favorite targets often include message board posts, web mail messages, and web chat software. The unsuspecting user is not required to interact with any additional site/link (e.g. an attacker site or a malicious link sent via email), just simply view the web page containing the code.</p>",
+      "solution": "<p>Phase: Architecture and Design</p><p>Use a vetted library or framework that does not allow this weakness to occur or provides constructs that make this weakness easier to avoid.</p><p>Examples of libraries and frameworks that make it easier to generate properly encoded output include Microsoft's Anti-XSS library, the OWASP ESAPI Encoding module, and Apache Wicket.</p><p></p><p>Phases: Implementation; Architecture and Design</p><p>Understand the context in which your data will be used and the encoding that will be expected. This is especially important when transmitting data between different components, or when generating outputs that can contain multiple encodings at the same time, such as web pages or multi-part mail messages. Study all expected communication protocols and data representations to determine the required encoding strategies.</p><p>For any data that will be output to another web page, especially any data that was received from external inputs, use the appropriate encoding on all non-alphanumeric characters.</p><p>Consult the XSS Prevention Cheat Sheet for more details on the types of encoding and escaping that are needed.</p><p></p><p>Phase: Architecture and Design</p><p>For any security checks that are performed on the client side, ensure that these checks are duplicated on the server side, in order to avoid CWE-602. Attackers can bypass the client-side checks by modifying values after the checks have been performed, or by changing the client to remove the client-side checks entirely. Then, these modified values would be submitted to the server.</p><p></p><p>If available, use structured mechanisms that automatically enforce the separation between data and code. These mechanisms may be able to provide the relevant quoting, encoding, and validation automatically, instead of relying on the developer to provide this capability at every point where output is generated.</p><p></p><p>Phase: Implementation</p><p>For every web page that is generated, use and specify a character encoding such as ISO-8859-1 or UTF-8. When an encoding is not specified, the web browser may choose a different encoding by guessing which encoding is actually being used by the web page. This can cause the web browser to treat certain sequences as special, opening up the client to subtle XSS attacks. See CWE-116 for more mitigations related to encoding/escaping.</p><p></p><p>To help mitigate XSS attacks against the user's session cookie, set the session cookie to be HttpOnly. In browsers that support the HttpOnly feature (such as more recent versions of Internet Explorer and Firefox), this attribute can prevent the user's session cookie from being accessible to malicious client-side scripts that use document.cookie. This is not a complete solution, since HttpOnly is not supported by all browsers. More importantly, XMLHTTPRequest and other powerful browser technologies provide read access to HTTP headers, including the Set-Cookie header in which the HttpOnly flag is set.</p><p></p><p>Assume all input is malicious. Use an \"accept known good\" input validation strategy, i.e., use an allow list of acceptable inputs that strictly conform to specifications. Reject any input that does not strictly conform to specifications, or transform it into something that does. Do not rely exclusively on looking for malicious or malformed inputs (i.e., do not rely on a deny list). However, deny lists can be useful for detecting potential attacks or determining which inputs are so malformed that they should be rejected outright.</p><p></p><p>When performing input validation, consider all potentially relevant properties, including length, type of input, the full range of acceptable values, missing or extra inputs, syntax, consistency across related fields, and conformance to business rules. As an example of business rule logic, \"boat\" may be syntactically valid because it only contains alphanumeric characters, but it is not valid if you are expecting colors such as \"red\" or \"blue.\"</p><p></p><p>Ensure that you perform input validation at well-defined interfaces within the application. This will help protect the application even if a component is reused or moved elsewhere.</p><p>\t</p>",
+      "count": 19,
+      "instances": [
+        {
+          "id": "146",
+          "uri": "http://testphp.vulnweb.com/artists.php?artist=%3CscrIpt%3Ealert%281%29%3B%3C%2FscRipt%3E",
+          "nodeName": "http://testphp.vulnweb.com/artists.php (artist)",
+          "method": "GET",
+          "param": "artist",
+          "attack": "<scrIpt>alert(1);</scRipt>",
+          "evidence": "<scrIpt>alert(1);</scRipt>",
+          "otherinfo": ""
+        },
+        {
+          "id": "141",
+          "uri": "http://testphp.vulnweb.com/hpp/?pp=%22+onMouseOver%3D%22alert%281%29%3B",
+          "nodeName": "http://testphp.vulnweb.com/hpp/ (pp)",
+          "method": "GET",
+          "param": "pp",
+          "attack": "\" onMouseOver=\"alert(1);",
+          "evidence": "\" onMouseOver=\"alert(1);",
+          "otherinfo": ""
+        },
+        {
+          "id": "148",
+          "uri": "http://testphp.vulnweb.com/hpp/params.php?p=%3CscrIpt%3Ealert%281%29%3B%3C%2FscRipt%3E&pp=12",
+          "nodeName": "http://testphp.vulnweb.com/hpp/params.php (p,pp)",
+          "method": "GET",
+          "param": "p",
+          "attack": "<scrIpt>alert(1);</scRipt>",
+          "evidence": "<scrIpt>alert(1);</scRipt>",
+          "otherinfo": ""
+        },
+        {
+          "id": "152",
+          "uri": "http://testphp.vulnweb.com/hpp/params.php?p=valid&pp=%3CscrIpt%3Ealert%281%29%3B%3C%2FscRipt%3E",
+          "nodeName": "http://testphp.vulnweb.com/hpp/params.php (p,pp)",
+          "method": "GET",
+          "param": "pp",
+          "attack": "<scrIpt>alert(1);</scRipt>",
+          "evidence": "<scrIpt>alert(1);</scRipt>",
+          "otherinfo": ""
+        },
+        {
+          "id": "150",
+          "uri": "http://testphp.vulnweb.com/listproducts.php?artist=%3CscrIpt%3Ealert%281%29%3B%3C%2FscRipt%3E",
+          "nodeName": "http://testphp.vulnweb.com/listproducts.php (artist)",
+          "method": "GET",
+          "param": "artist",
+          "attack": "<scrIpt>alert(1);</scRipt>",
+          "evidence": "<scrIpt>alert(1);</scRipt>",
+          "otherinfo": ""
+        },
+        {
+          "id": "151",
+          "uri": "http://testphp.vulnweb.com/listproducts.php?cat=%3CscrIpt%3Ealert%281%29%3B%3C%2FscRipt%3E",
+          "nodeName": "http://testphp.vulnweb.com/listproducts.php (cat)",
+          "method": "GET",
+          "param": "cat",
+          "attack": "<scrIpt>alert(1);</scRipt>",
+          "evidence": "<scrIpt>alert(1);</scRipt>",
+          "otherinfo": ""
+        },
+        {
+          "id": "154",
+          "uri": "http://testphp.vulnweb.com/product.php?pic=%3CscrIpt%3Ealert%281%29%3B%3C%2FscRipt%3E",
+          "nodeName": "http://testphp.vulnweb.com/product.php (pic)",
+          "method": "GET",
+          "param": "pic",
+          "attack": "<scrIpt>alert(1);</scRipt>",
+          "evidence": "<scrIpt>alert(1);</scRipt>",
+          "otherinfo": ""
+        },
+        {
+          "id": "137",
+          "uri": "http://testphp.vulnweb.com/guestbook.php",
+          "nodeName": "http://testphp.vulnweb.com/guestbook.php ()(name,submit,text)",
+          "method": "POST",
+          "param": "name",
+          "attack": "</strong><scrIpt>alert(1);</scRipt><strong>",
+          "evidence": "</strong><scrIpt>alert(1);</scRipt><strong>",
+          "otherinfo": ""
+        },
+        {
+          "id": "139",
+          "uri": "http://testphp.vulnweb.com/guestbook.php",
+          "nodeName": "http://testphp.vulnweb.com/guestbook.php ()(name,submit,text)",
+          "method": "POST",
+          "param": "text",
+          "attack": "</td><scrIpt>alert(1);</scRipt><td>",
+          "evidence": "</td><scrIpt>alert(1);</scRipt><td>",
+          "otherinfo": ""
+        },
+        {
+          "id": "140",
+          "uri": "http://testphp.vulnweb.com/search.php?test=query",
+          "nodeName": "http://testphp.vulnweb.com/search.php (test)(goButton,searchFor)",
+          "method": "POST",
+          "param": "searchFor",
+          "attack": "</h2><scrIpt>alert(1);</scRipt><h2>",
+          "evidence": "</h2><scrIpt>alert(1);</scRipt><h2>",
+          "otherinfo": ""
+        },
+        {
+          "id": "138",
+          "uri": "http://testphp.vulnweb.com/search.php?test=%27%22%3CscrIpt%3Ealert%281%29%3B%3C%2FscRipt%3E",
+          "nodeName": "http://testphp.vulnweb.com/search.php (test)(goButton,searchFor)",
+          "method": "POST",
+          "param": "test",
+          "attack": "'\"<scrIpt>alert(1);</scRipt>",
+          "evidence": "'\"<scrIpt>alert(1);</scRipt>",
+          "otherinfo": ""
+        },
+        {
+          "id": "155",
+          "uri": "http://testphp.vulnweb.com/secured/newuser.php",
+          "nodeName": "http://testphp.vulnweb.com/secured/newuser.php ()(signup,uaddress,ucc,uemail,upass,upass2,uphone,urname,uuname)",
+          "method": "POST",
+          "param": "uaddress",
+          "attack": "</li><scrIpt>alert(1);</scRipt><li>",
+          "evidence": "</li><scrIpt>alert(1);</scRipt><li>",
+          "otherinfo": ""
+        },
+        {
+          "id": "147",
+          "uri": "http://testphp.vulnweb.com/secured/newuser.php",
+          "nodeName": "http://testphp.vulnweb.com/secured/newuser.php ()(signup,uaddress,ucc,uemail,upass,upass2,uphone,urname,uuname)",
+          "method": "POST",
+          "param": "ucc",
+          "attack": "</li><scrIpt>alert(1);</scRipt><li>",
+          "evidence": "</li><scrIpt>alert(1);</scRipt><li>",
+          "otherinfo": ""
+        },
+        {
+          "id": "149",
+          "uri": "http://testphp.vulnweb.com/secured/newuser.php",
+          "nodeName": "http://testphp.vulnweb.com/secured/newuser.php ()(signup,uaddress,ucc,uemail,upass,upass2,uphone,urname,uuname)",
+          "method": "POST",
+          "param": "uemail",
+          "attack": "</li><scrIpt>alert(1);</scRipt><li>",
+          "evidence": "</li><scrIpt>alert(1);</scRipt><li>",
+          "otherinfo": ""
+        },
+        {
+          "id": "153",
+          "uri": "http://testphp.vulnweb.com/secured/newuser.php",
+          "nodeName": "http://testphp.vulnweb.com/secured/newuser.php ()(signup,uaddress,ucc,uemail,upass,upass2,uphone,urname,uuname)",
+          "method": "POST",
+          "param": "uphone",
+          "attack": "</li><scrIpt>alert(1);</scRipt><li>",
+          "evidence": "</li><scrIpt>alert(1);</scRipt><li>",
+          "otherinfo": ""
+        },
+        {
+          "id": "145",
+          "uri": "http://testphp.vulnweb.com/secured/newuser.php",
+          "nodeName": "http://testphp.vulnweb.com/secured/newuser.php ()(signup,uaddress,ucc,uemail,upass,upass2,uphone,urname,uuname)",
+          "method": "POST",
+          "param": "urname",
+          "attack": "</li><scrIpt>alert(1);</scRipt><li>",
+          "evidence": "</li><scrIpt>alert(1);</scRipt><li>",
+          "otherinfo": ""
+        },
+        {
+          "id": "142",
+          "uri": "http://testphp.vulnweb.com/secured/newuser.php",
+          "nodeName": "http://testphp.vulnweb.com/secured/newuser.php ()(signup,uaddress,ucc,uemail,upass,upass2,uphone,urname,uuname)",
+          "method": "POST",
+          "param": "uuname",
+          "attack": "</li><scrIpt>alert(1);</scRipt><li>",
+          "evidence": "</li><scrIpt>alert(1);</scRipt><li>",
+          "otherinfo": ""
+        },
+        {
+          "id": "144",
+          "uri": "http://testphp.vulnweb.com/userinfo.php",
+          "nodeName": "http://testphp.vulnweb.com/userinfo.php ()(pass,uname)",
+          "method": "POST",
+          "param": "pass",
+          "attack": "'\"<scrIpt>alert(1);</scRipt>",
+          "evidence": "'\"<scrIpt>alert(1);</scRipt>",
+          "otherinfo": ""
+        },
+        {
+          "id": "143",
+          "uri": "http://testphp.vulnweb.com/userinfo.php",
+          "nodeName": "http://testphp.vulnweb.com/userinfo.php ()(pass,uname)",
+          "method": "POST",
+          "param": "uname",
+          "attack": "'\"<scrIpt>alert(1);</scRipt>",
+          "evidence": "'\"<scrIpt>alert(1);</scRipt>",
+          "otherinfo": ""
+        }
+      ]
+    },
+    {
+      "severity": "High",
+      "name": "Cross-Domain Misconfiguration - Adobe - Read",
+      "description": "<p>Flash/Silverlight based cross-site request forgery may be possible, due to a misconfiguration on the web server.</p>",
+      "solution": "<p>Configure the crossdomain.xml file to restrict the list of domains that are allowed to make cross-domain read requests to this web server, using <allow-access-from domain=\"example.com\">. You should only grant access to \"*\" (all domains) if you are certain that this service does not host any access-controlled, personalized, or private data.</p>",
+      "count": 1,
+      "instances": [
+        {
+          "id": "402",
+          "uri": "http://testphp.vulnweb.com/crossdomain.xml",
+          "nodeName": "http://testphp.vulnweb.com/crossdomain.xml",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "<allow-access-from domain=\"*\"",
+          "otherinfo": "The web server permits malicious cross-domain data read requests originating from Flash/Silverlight components served from any third party domain, to this domain. If the victim user is logged into this service, the malicious read requests are processed using the privileges of the victim, and can result in data from this service being compromised by an unauthorised third party web site, via the victims web browser. This is particularly likely to be an issue if a Cookie based session implementation is in use."
+        }
+      ]
+    },
+    {
+      "severity": "High",
+      "name": "SQL Injection - MySQL",
+      "description": "<p>SQL injection may be possible.</p>",
+      "solution": "<p>Do not trust client side input, even if there is client side validation in place.</p><p>In general, type check all data on the server side.</p><p>If the application uses JDBC, use PreparedStatement or CallableStatement, with parameters passed by '?'</p><p>If the application uses ASP, use ADO Command Objects with strong type checking and parameterized queries.</p><p>If database Stored Procedures can be used, use them.</p><p>Do *not* concatenate strings into queries in the stored procedure, or use 'exec', 'exec immediate', or equivalent functionality!</p><p>Do not create dynamic SQL queries using simple string concatenation.</p><p>Escape all data received from the client.</p><p>Apply an 'allow list' of allowed characters, or a 'deny list' of disallowed characters in user input.</p><p>Apply the principle of least privilege by using the least privileged database user possible.</p><p>In particular, avoid using the 'sa' or 'db-owner' database users. This does not eliminate SQL injection, but minimizes its impact.</p><p>Grant the minimum database access that is necessary for the application.</p>",
+      "count": 9,
+      "instances": [
+        {
+          "id": "161",
+          "uri": "http://testphp.vulnweb.com/artists.php?artist=%27",
+          "nodeName": "http://testphp.vulnweb.com/artists.php (artist)",
+          "method": "GET",
+          "param": "artist",
+          "attack": "'",
+          "evidence": "You have an error in your SQL syntax",
+          "otherinfo": "RDBMS [MySQL] likely, given error message regular expression [\\QYou have an error in your SQL syntax\\E] matched by the HTML results.\nThe vulnerability was detected by manipulating the parameter to cause a database error message to be returned and recognised."
+        },
+        {
+          "id": "162",
+          "uri": "http://testphp.vulnweb.com/listproducts.php?artist=%27",
+          "nodeName": "http://testphp.vulnweb.com/listproducts.php (artist)",
+          "method": "GET",
+          "param": "artist",
+          "attack": "'",
+          "evidence": "You have an error in your SQL syntax",
+          "otherinfo": "RDBMS [MySQL] likely, given error message regular expression [\\QYou have an error in your SQL syntax\\E] matched by the HTML results.\nThe vulnerability was detected by manipulating the parameter to cause a database error message to be returned and recognised."
+        },
+        {
+          "id": "163",
+          "uri": "http://testphp.vulnweb.com/listproducts.php?cat=%27",
+          "nodeName": "http://testphp.vulnweb.com/listproducts.php (cat)",
+          "method": "GET",
+          "param": "cat",
+          "attack": "'",
+          "evidence": "You have an error in your SQL syntax",
+          "otherinfo": "RDBMS [MySQL] likely, given error message regular expression [\\QYou have an error in your SQL syntax\\E] matched by the HTML results.\nThe vulnerability was detected by manipulating the parameter to cause a database error message to be returned and recognised."
+        },
+        {
+          "id": "164",
+          "uri": "http://testphp.vulnweb.com/product.php?pic=%27",
+          "nodeName": "http://testphp.vulnweb.com/product.php (pic)",
+          "method": "GET",
+          "param": "pic",
+          "attack": "'",
+          "evidence": "You have an error in your SQL syntax",
+          "otherinfo": "RDBMS [MySQL] likely, given error message regular expression [\\QYou have an error in your SQL syntax\\E] matched by the HTML results.\nThe vulnerability was detected by manipulating the parameter to cause a database error message to be returned and recognised."
+        },
+        {
+          "id": "157",
+          "uri": "http://testphp.vulnweb.com/search.php?test=query",
+          "nodeName": "http://testphp.vulnweb.com/search.php (test)(goButton,searchFor)",
+          "method": "POST",
+          "param": "searchFor",
+          "attack": "ZAP'",
+          "evidence": "You have an error in your SQL syntax",
+          "otherinfo": "RDBMS [MySQL] likely, given error message regular expression [\\QYou have an error in your SQL syntax\\E] matched by the HTML results.\nThe vulnerability was detected by manipulating the parameter to cause a database error message to be returned and recognised."
+        },
+        {
+          "id": "156",
+          "uri": "http://testphp.vulnweb.com/search.php?test=%27",
+          "nodeName": "http://testphp.vulnweb.com/search.php (test)(goButton,searchFor)",
+          "method": "POST",
+          "param": "test",
+          "attack": "'",
+          "evidence": "You have an error in your SQL syntax",
+          "otherinfo": "RDBMS [MySQL] likely, given error message regular expression [\\QYou have an error in your SQL syntax\\E] matched by the HTML results.\nThe vulnerability was detected by manipulating the parameter to cause a database error message to be returned and recognised."
+        },
+        {
+          "id": "158",
+          "uri": "http://testphp.vulnweb.com/secured/newuser.php",
+          "nodeName": "http://testphp.vulnweb.com/secured/newuser.php ()(signup,uaddress,ucc,uemail,upass,upass2,uphone,urname,uuname)",
+          "method": "POST",
+          "param": "uuname",
+          "attack": "'",
+          "evidence": "You have an error in your SQL syntax",
+          "otherinfo": "RDBMS [MySQL] likely, given error message regular expression [\\QYou have an error in your SQL syntax\\E] matched by the HTML results.\nThe vulnerability was detected by manipulating the parameter to cause a database error message to be returned and recognised."
+        },
+        {
+          "id": "160",
+          "uri": "http://testphp.vulnweb.com/userinfo.php",
+          "nodeName": "http://testphp.vulnweb.com/userinfo.php ()(pass,uname)",
+          "method": "POST",
+          "param": "pass",
+          "attack": "'",
+          "evidence": "You have an error in your SQL syntax",
+          "otherinfo": "RDBMS [MySQL] likely, given error message regular expression [\\QYou have an error in your SQL syntax\\E] matched by the HTML results.\nThe vulnerability was detected by manipulating the parameter to cause a database error message to be returned and recognised."
+        },
+        {
+          "id": "159",
+          "uri": "http://testphp.vulnweb.com/userinfo.php",
+          "nodeName": "http://testphp.vulnweb.com/userinfo.php ()(pass,uname)",
+          "method": "POST",
+          "param": "uname",
+          "attack": "'",
+          "evidence": "You have an error in your SQL syntax",
+          "otherinfo": "RDBMS [MySQL] likely, given error message regular expression [\\QYou have an error in your SQL syntax\\E] matched by the HTML results.\nThe vulnerability was detected by manipulating the parameter to cause a database error message to be returned and recognised."
+        }
+      ]
+    },
+    {
+      "severity": "High",
+      "name": "SQL Injection - MySQL (Time Based)",
+      "description": "<p>SQL injection may be possible.</p>",
+      "solution": "<p>Do not trust client side input, even if there is client side validation in place.</p><p>In general, type check all data on the server side.</p><p>If the application uses JDBC, use PreparedStatement or CallableStatement, with parameters passed by '?'</p><p>If the application uses ASP, use ADO Command Objects with strong type checking and parameterized queries.</p><p>If database Stored Procedures can be used, use them.</p><p>Do *not* concatenate strings into queries in the stored procedure, or use 'exec', 'exec immediate', or equivalent functionality!</p><p>Do not create dynamic SQL queries using simple string concatenation.</p><p>Escape all data received from the client.</p><p>Apply an 'allow list' of allowed characters, or a 'deny list' of disallowed characters in user input.</p><p>Apply the principle of least privilege by using the least privileged database user possible.</p><p>In particular, avoid using the 'sa' or 'db-owner' database users. This does not eliminate SQL injection, but minimizes its impact.</p><p>Grant the minimum database access that is necessary for the application.</p>",
+      "count": 4,
+      "instances": [
+        {
+          "id": "167",
+          "uri": "http://testphp.vulnweb.com/artists.php?artist=1",
+          "nodeName": "http://testphp.vulnweb.com/artists.php (artist)",
+          "method": "GET",
+          "param": "artist",
+          "attack": "1 and 0 in (select sleep(15) ) -- ",
+          "evidence": "",
+          "otherinfo": "The query time is controllable using parameter value [1 and 0 in (select sleep(15) ) -- ], which caused the request to take [15,409] milliseconds, when the original unmodified query with value [1] took [0] milliseconds."
+        },
+        {
+          "id": "168",
+          "uri": "http://testphp.vulnweb.com/product.php?pic=6",
+          "nodeName": "http://testphp.vulnweb.com/product.php (pic)",
+          "method": "GET",
+          "param": "pic",
+          "attack": "6 and 0 in (select sleep(15) ) -- ",
+          "evidence": "",
+          "otherinfo": "The query time is controllable using parameter value [6 and 0 in (select sleep(15) ) -- ], which caused the request to take [15,475] milliseconds, when the original unmodified query with value [6] took [0] milliseconds."
+        },
+        {
+          "id": "165",
+          "uri": "http://testphp.vulnweb.com/secured/newuser.php",
+          "nodeName": "http://testphp.vulnweb.com/secured/newuser.php ()(signup,uaddress,ucc,uemail,upass,upass2,uphone,urname,uuname)",
+          "method": "POST",
+          "param": "uuname",
+          "attack": "ZAP' / sleep(15) / '",
+          "evidence": "",
+          "otherinfo": "The query time is controllable using parameter value [ZAP' / sleep(15) / '], which caused the request to take [15,392] milliseconds, when the original unmodified query with value [ZAP] took [0] milliseconds."
+        },
+        {
+          "id": "166",
+          "uri": "http://testphp.vulnweb.com/userinfo.php",
+          "nodeName": "http://testphp.vulnweb.com/userinfo.php ()(pass,uname)",
+          "method": "POST",
+          "param": "uname",
+          "attack": "ZAP' / sleep(15) / '",
+          "evidence": "",
+          "otherinfo": "The query time is controllable using parameter value [ZAP' / sleep(15) / '], which caused the request to take [15,394] milliseconds, when the original unmodified query with value [ZAP] took [0] milliseconds."
+        }
+      ]
+    },
+    {
+      "severity": "High",
+      "name": "Source Code Disclosure - File Inclusion",
+      "description": "<p>The Path Traversal attack technique allows an attacker access to files, directories, and commands that potentially reside outside the web document root directory. An attacker may manipulate a URL in such a way that the web site will execute or reveal the contents of arbitrary files anywhere on the web server. Any device that exposes an HTTP-based interface is potentially vulnerable to Path Traversal.</p><p></p><p>Most web sites restrict user access to a specific portion of the file-system, typically called the \"web document root\" or \"CGI root\" directory. These directories contain the files intended for user access and the executable necessary to drive web application functionality. To access files or execute commands anywhere on the file-system, Path Traversal attacks will utilize the ability of special-characters sequences.</p><p></p><p>The most basic Path Traversal attack uses the \"../\" special-character sequence to alter the resource location requested in the URL. Although most popular web servers will prevent this technique from escaping the web document root, alternate encodings of the \"../\" sequence may help bypass the security filters. These method variations include valid and invalid Unicode-encoding (\"..%u2216\" or \"..%c0%af\") of the forward slash character, backslash characters (\"..\\\") on Windows-based servers, URL encoded characters \"%2e%2e%2f\"), and double URL encoding (\"..%255c\") of the backslash character.</p><p></p><p>Even if the web server properly restricts Path Traversal attempts in the URL path, a web application itself may still be vulnerable due to improper handling of user-supplied input. This is a common problem of web applications that use template mechanisms or load static text from files. In variations of the attack, the original URL parameter value is substituted with the file name of one of the web application's dynamic scripts. Consequently, the results can reveal source code because the file is interpreted as text instead of an executable script. These techniques often employ additional special characters such as the dot (\".\") to reveal the listing of the current working directory, or \"%00\" NULL characters in order to bypass rudimentary file extension checks.</p>",
+      "solution": "<p>Assume all input is malicious. Use an \"accept known good\" input validation strategy, i.e., use an allow list of acceptable inputs that strictly conform to specifications. Reject any input that does not strictly conform to specifications, or transform it into something that does. Do not rely exclusively on looking for malicious or malformed inputs (i.e., do not rely on a deny list). However, deny lists can be useful for detecting potential attacks or determining which inputs are so malformed that they should be rejected outright.</p><p></p><p>When performing input validation, consider all potentially relevant properties, including length, type of input, the full range of acceptable values, missing or extra inputs, syntax, consistency across related fields, and conformance to business rules. As an example of business rule logic, \"boat\" may be syntactically valid because it only contains alphanumeric characters, but it is not valid if you are expecting colors such as \"red\" or \"blue.\"</p><p></p><p>For filenames, use stringent allow lists that limit the character set to be used. If feasible, only allow a single \".\" character in the filename to avoid weaknesses, and exclude directory separators such as \"/\". Use an allow list of allowable file extensions.</p><p></p><p>Warning: if you attempt to cleanse your data, then do so that the end result is not in the form that can be dangerous. A sanitizing mechanism can remove characters such as '.' and ';' which may be required for some exploits. An attacker can try to fool the sanitizing mechanism into \"cleaning\" data into a dangerous form. Suppose the attacker injects a '.' inside a filename (e.g. \"sensi.tiveFile\") and the sanitizing mechanism removes the character resulting in the valid filename, \"sensitiveFile\". If the input data are now assumed to be safe, then the file may be compromised. </p><p></p><p>Inputs should be decoded and canonicalized to the application's current internal representation before being validated. Make sure that your application does not decode the same input twice. Such errors could be used to bypass allow list schemes by introducing dangerous inputs after they have been checked.</p><p></p><p>Use a built-in path canonicalization function (such as realpath() in C) that produces the canonical version of the pathname, which effectively removes \"..\" sequences and symbolic links.</p><p></p><p>Run your code using the lowest privileges that are required to accomplish the necessary tasks. If possible, create isolated accounts with limited privileges that are only used for a single task. That way, a successful attack will not immediately give the attacker access to the rest of the software or its environment. For example, database applications rarely need to run as the database administrator, especially in day-to-day operations.</p><p></p><p>When the set of acceptable objects, such as filenames or URLs, is limited or known, create a mapping from a set of fixed input values (such as numeric IDs) to the actual filenames or URLs, and reject all other inputs.</p><p></p><p>Run your code in a \"jail\" or similar sandbox environment that enforces strict boundaries between the process and the operating system. This may effectively restrict which files can be accessed in a particular directory or which commands can be executed by your software.</p><p></p><p>OS-level examples include the Unix chroot jail, AppArmor, and SELinux. In general, managed code may provide some protection. For example, java.io.FilePermission in the Java SecurityManager allows you to specify restrictions on file operations.</p><p></p><p>This may not be a feasible solution, and it only limits the impact to the operating system; the rest of your application may still be subject to compromise.</p><p></p>",
+      "count": 4,
+      "instances": [
+        {
+          "id": "398",
+          "uri": "http://testphp.vulnweb.com/hpp/params.php?p=valid&pp=12",
+          "nodeName": "http://testphp.vulnweb.com/hpp/params.php (p,pp)",
+          "method": "GET",
+          "param": "p",
+          "attack": "params.php",
+          "evidence": "",
+          "otherinfo": "The output for the source code filename [params.php] differs sufficiently from that of the random parameter [ybqhxisguxmtcjksplumqnlqstskehlzgigmke], at [4%], compared to a threshold of [75%]"
+        },
+        {
+          "id": "399",
+          "uri": "http://testphp.vulnweb.com/hpp/params.php?p=valid&pp=12",
+          "nodeName": "http://testphp.vulnweb.com/hpp/params.php (p,pp)",
+          "method": "GET",
+          "param": "pp",
+          "attack": "params.php",
+          "evidence": "",
+          "otherinfo": "The output for the source code filename [params.php] differs sufficiently from that of the random parameter [ybqhxisguxmtcjksplumqnlqstskehlzgigmke], at [17%], compared to a threshold of [75%]"
+        },
+        {
+          "id": "400",
+          "uri": "http://testphp.vulnweb.com/showimage.php?file=./pictures/7.jpg",
+          "nodeName": "http://testphp.vulnweb.com/showimage.php (file)",
+          "method": "GET",
+          "param": "file",
+          "attack": "showimage.php",
+          "evidence": "",
+          "otherinfo": "The output for the source code filename [showimage.php] differs sufficiently from that of the random parameter [ybqhxisguxmtcjksplumqnlqstskehlzgigmke], at [21%], compared to a threshold of [75%]"
+        },
+        {
+          "id": "401",
+          "uri": "http://testphp.vulnweb.com/showimage.php?file=./pictures/6.jpg&size=160",
+          "nodeName": "http://testphp.vulnweb.com/showimage.php (file,size)",
+          "method": "GET",
+          "param": "file",
+          "attack": "showimage.php",
+          "evidence": "",
+          "otherinfo": "The output for the source code filename [showimage.php] differs sufficiently from that of the random parameter [ybqhxisguxmtcjksplumqnlqstskehlzgigmke], at [21%], compared to a threshold of [75%]"
+        }
+      ]
+    },
+    {
+      "severity": "Medium",
+      "name": "Absence of Anti-CSRF Tokens",
+      "description": "<p>No Anti-CSRF tokens were found in a HTML submission form.</p><p>A cross-site request forgery is an attack that involves forcing a victim to send an HTTP request to a target destination without their knowledge or intent in order to perform an action as the victim. The underlying cause is application functionality using predictable URL/form actions in a repeatable way. The nature of the attack is that CSRF exploits the trust that a web site has for a user. By contrast, cross-site scripting (XSS) exploits the trust that a user has for a web site. Like XSS, CSRF attacks are not necessarily cross-site, but they can be. Cross-site request forgery is also known as CSRF, XSRF, one-click attack, session riding, confused deputy, and sea surf.</p><p></p><p>CSRF attacks are effective in a number of situations, including:</p><p>    * The victim has an active session on the target site.</p><p>    * The victim is authenticated via HTTP auth on the target site.</p><p>    * The victim is on the same local network as the target site.</p><p></p><p>CSRF has primarily been used to perform an action against a target site using the victim's privileges, but recent techniques have been discovered to disclose information by gaining access to the response. The risk of information disclosure is dramatically increased when the target site is vulnerable to XSS, because XSS can be used as a platform for CSRF, allowing the attack to operate within the bounds of the same-origin policy.</p>",
+      "solution": "<p>Phase: Architecture and Design</p><p>Use a vetted library or framework that does not allow this weakness to occur or provides constructs that make this weakness easier to avoid.</p><p>For example, use anti-CSRF packages such as the OWASP CSRFGuard.</p><p></p><p>Phase: Implementation</p><p>Ensure that your application is free of cross-site scripting issues, because most CSRF defenses can be bypassed using attacker-controlled script.</p><p></p><p>Phase: Architecture and Design</p><p>Generate a unique nonce for each form, place the nonce into the form, and verify the nonce upon receipt of the form. Be sure that the nonce is not predictable (CWE-330).</p><p>Note that this can be bypassed using XSS.</p><p></p><p>Identify especially dangerous operations. When the user performs a dangerous operation, send a separate confirmation request to ensure that the user intended to perform that operation.</p><p>Note that this can be bypassed using XSS.</p><p></p><p>Use the ESAPI Session Management control.</p><p>This control includes a component for CSRF.</p><p></p><p>Do not use the GET method for any request that triggers a state change.</p><p></p><p>Phase: Implementation</p><p>Check the HTTP Referer header to see if the request originated from an expected page. This could break legitimate functionality, because users or proxies may have disabled sending the Referer for privacy reasons.</p>",
+      "count": 5,
+      "instances": [
+        {
+          "id": "3",
+          "uri": "http://testphp.vulnweb.com/",
+          "nodeName": "http://testphp.vulnweb.com/",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "<form action=\"search.php?test=query\" method=\"post\">",
+          "otherinfo": "No known Anti-CSRF token [anticsrf, CSRFToken, __RequestVerificationToken, csrfmiddlewaretoken, authenticity_token, OWASP_CSRFTOKEN, anoncsrf, csrf_token, _csrf, _csrfSecret, __csrf_magic, CSRF, _token, _csrf_token, _csrfToken] was found in the following HTML form: [Form 1: \"goButton\" \"searchFor\" ]."
+        },
+        {
+          "id": "55",
+          "uri": "http://testphp.vulnweb.com/artists.php",
+          "nodeName": "http://testphp.vulnweb.com/artists.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "<form action=\"search.php?test=query\" method=\"post\">",
+          "otherinfo": "No known Anti-CSRF token [anticsrf, CSRFToken, __RequestVerificationToken, csrfmiddlewaretoken, authenticity_token, OWASP_CSRFTOKEN, anoncsrf, csrf_token, _csrf, _csrfSecret, __csrf_magic, CSRF, _token, _csrf_token, _csrfToken] was found in the following HTML form: [Form 1: \"goButton\" \"searchFor\" ]."
+        },
+        {
+          "id": "29",
+          "uri": "http://testphp.vulnweb.com/categories.php",
+          "nodeName": "http://testphp.vulnweb.com/categories.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "<form action=\"search.php?test=query\" method=\"post\">",
+          "otherinfo": "No known Anti-CSRF token [anticsrf, CSRFToken, __RequestVerificationToken, csrfmiddlewaretoken, authenticity_token, OWASP_CSRFTOKEN, anoncsrf, csrf_token, _csrf, _csrfSecret, __csrf_magic, CSRF, _token, _csrf_token, _csrfToken] was found in the following HTML form: [Form 1: \"goButton\" \"searchFor\" ]."
+        },
+        {
+          "id": "72",
+          "uri": "http://testphp.vulnweb.com/disclaimer.php",
+          "nodeName": "http://testphp.vulnweb.com/disclaimer.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "<form action=\"search.php?test=query\" method=\"post\">",
+          "otherinfo": "No known Anti-CSRF token [anticsrf, CSRFToken, __RequestVerificationToken, csrfmiddlewaretoken, authenticity_token, OWASP_CSRFTOKEN, anoncsrf, csrf_token, _csrf, _csrfSecret, __csrf_magic, CSRF, _token, _csrf_token, _csrfToken] was found in the following HTML form: [Form 1: \"goButton\" \"searchFor\" ]."
+        },
+        {
+          "id": "50",
+          "uri": "http://testphp.vulnweb.com/index.php",
+          "nodeName": "http://testphp.vulnweb.com/index.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "<form action=\"search.php?test=query\" method=\"post\">",
+          "otherinfo": "No known Anti-CSRF token [anticsrf, CSRFToken, __RequestVerificationToken, csrfmiddlewaretoken, authenticity_token, OWASP_CSRFTOKEN, anoncsrf, csrf_token, _csrf, _csrfSecret, __csrf_magic, CSRF, _token, _csrf_token, _csrfToken] was found in the following HTML form: [Form 1: \"goButton\" \"searchFor\" ]."
+        }
+      ]
+    },
+    {
+      "severity": "Medium",
+      "name": "Anti-CSRF Tokens Check",
+      "description": "<p>A cross-site request forgery is an attack that involves forcing a victim to send an HTTP request to a target destination without their knowledge or intent in order to perform an action as the victim. The underlying cause is application functionality using predictable URL/form actions in a repeatable way. The nature of the attack is that CSRF exploits the trust that a web site has for a user. By contrast, cross-site scripting (XSS) exploits the trust that a user has for a web site. Like XSS, CSRF attacks are not necessarily cross-site, but they can be. Cross-site request forgery is also known as CSRF, XSRF, one-click attack, session riding, confused deputy, and sea surf.</p><p></p><p>CSRF attacks are effective in a number of situations, including:</p><p>    * The victim has an active session on the target site.</p><p>    * The victim is authenticated via HTTP auth on the target site.</p><p>    * The victim is on the same local network as the target site.</p><p></p><p>CSRF has primarily been used to perform an action against a target site using the victim's privileges, but recent techniques have been discovered to disclose information by gaining access to the response. The risk of information disclosure is dramatically increased when the target site is vulnerable to XSS, because XSS can be used as a platform for CSRF, allowing the attack to operate within the bounds of the same-origin policy.</p>",
+      "solution": "<p>Phase: Architecture and Design</p><p>Use a vetted library or framework that does not allow this weakness to occur or provides constructs that make this weakness easier to avoid.</p><p>For example, use anti-CSRF packages such as the OWASP CSRFGuard.</p><p></p><p>Phase: Implementation</p><p>Ensure that your application is free of cross-site scripting issues, because most CSRF defenses can be bypassed using attacker-controlled script.</p><p></p><p>Phase: Architecture and Design</p><p>Generate a unique nonce for each form, place the nonce into the form, and verify the nonce upon receipt of the form. Be sure that the nonce is not predictable (CWE-330).</p><p>Note that this can be bypassed using XSS.</p><p></p><p>Identify especially dangerous operations. When the user performs a dangerous operation, send a separate confirmation request to ensure that the user intended to perform that operation.</p><p>Note that this can be bypassed using XSS.</p><p></p><p>Use the ESAPI Session Management control.</p><p>This control includes a component for CSRF.</p><p></p><p>Do not use the GET method for any request that triggers a state change.</p><p></p><p>Phase: Implementation</p><p>Check the HTTP Referer header to see if the request originated from an expected page. This could break legitimate functionality, because users or proxies may have disabled sending the Referer for privacy reasons.</p>",
+      "count": 4,
+      "instances": [
+        {
+          "id": "418",
+          "uri": "http://testphp.vulnweb.com/cart.php",
+          "nodeName": "http://testphp.vulnweb.com/cart.php ()(addcart,price)",
+          "method": "POST",
+          "param": "",
+          "attack": "",
+          "evidence": "<form action=\"search.php?test=query\" method=\"post\">",
+          "otherinfo": ""
+        },
+        {
+          "id": "419",
+          "uri": "http://testphp.vulnweb.com/guestbook.php",
+          "nodeName": "http://testphp.vulnweb.com/guestbook.php ()(name,submit,text)",
+          "method": "POST",
+          "param": "",
+          "attack": "",
+          "evidence": "<form action=\"\" method=\"post\" name=\"faddentry\">",
+          "otherinfo": ""
+        },
+        {
+          "id": "420",
+          "uri": "http://testphp.vulnweb.com/guestbook.php",
+          "nodeName": "http://testphp.vulnweb.com/guestbook.php ()(name,submit,text)",
+          "method": "POST",
+          "param": "",
+          "attack": "",
+          "evidence": "<form action=\"search.php?test=query\" method=\"post\">",
+          "otherinfo": ""
+        },
+        {
+          "id": "417",
+          "uri": "http://testphp.vulnweb.com/search.php?test=query",
+          "nodeName": "http://testphp.vulnweb.com/search.php (test)(goButton,searchFor)",
+          "method": "POST",
+          "param": "",
+          "attack": "",
+          "evidence": "<form action=\"search.php?test=query\" method=\"post\">",
+          "otherinfo": ""
+        }
+      ]
+    },
+    {
+      "severity": "Medium",
+      "name": "Backup File Disclosure",
+      "description": "<p>A backup of the file was disclosed by the web server.</p>",
+      "solution": "<p>Do not edit files in-situ on the web server, and ensure that un-necessary files (including hidden files) are removed from the web server.</p>",
+      "count": 14,
+      "instances": [
+        {
+          "id": "404",
+          "uri": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1%20-%20Copy%20(2).html",
+          "nodeName": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1 - Copy (2).html",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1%20-%20Copy%20(2).html",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1.html] is available at [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1%20-%20Copy%20(2).html]"
+        },
+        {
+          "id": "407",
+          "uri": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1%20-%20Copy%20(3).html",
+          "nodeName": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1 - Copy (3).html",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1%20-%20Copy%20(3).html",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1.html] is available at [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1%20-%20Copy%20(3).html]"
+        },
+        {
+          "id": "403",
+          "uri": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1%20-%20Copy.html",
+          "nodeName": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1 - Copy.html",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1%20-%20Copy.html",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1.html] is available at [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1%20-%20Copy.html]"
+        },
+        {
+          "id": "410",
+          "uri": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1backup.html",
+          "nodeName": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1backup.html",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1backup.html",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1.html] is available at [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-1backup.html]"
+        },
+        {
+          "id": "409",
+          "uri": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2%20-%20Copy%20(2).html",
+          "nodeName": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2 - Copy (2).html",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2%20-%20Copy%20(2).html",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2.html] is available at [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2%20-%20Copy%20(2).html]"
+        },
+        {
+          "id": "412",
+          "uri": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2%20-%20Copy%20(3).html",
+          "nodeName": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2 - Copy (3).html",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2%20-%20Copy%20(3).html",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2.html] is available at [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2%20-%20Copy%20(3).html]"
+        },
+        {
+          "id": "405",
+          "uri": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2%20-%20Copy.html",
+          "nodeName": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2 - Copy.html",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2%20-%20Copy.html",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2.html] is available at [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2%20-%20Copy.html]"
+        },
+        {
+          "id": "414",
+          "uri": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2backup.html",
+          "nodeName": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2backup.html",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2backup.html",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2.html] is available at [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-2backup.html]"
+        },
+        {
+          "id": "408",
+          "uri": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3%20-%20Copy%20(2).html",
+          "nodeName": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3 - Copy (2).html",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3%20-%20Copy%20(2).html",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3.html] is available at [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3%20-%20Copy%20(2).html]"
+        },
+        {
+          "id": "411",
+          "uri": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3%20-%20Copy%20(3).html",
+          "nodeName": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3 - Copy (3).html",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3%20-%20Copy%20(3).html",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3.html] is available at [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3%20-%20Copy%20(3).html]"
+        },
+        {
+          "id": "406",
+          "uri": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3%20-%20Copy.html",
+          "nodeName": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3 - Copy.html",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3%20-%20Copy.html",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3.html] is available at [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3%20-%20Copy.html]"
+        },
+        {
+          "id": "413",
+          "uri": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3backup.html",
+          "nodeName": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3backup.html",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3backup.html",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3.html] is available at [http://testphp.vulnweb.com/Mod_Rewrite_Shop/RateProduct-3backup.html]"
+        },
+        {
+          "id": "415",
+          "uri": "http://testphp.vulnweb.com/index.bak",
+          "nodeName": "http://testphp.vulnweb.com/index.bak",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/index.bak",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/index.php] is available at [http://testphp.vulnweb.com/index.bak]"
+        },
+        {
+          "id": "416",
+          "uri": "http://testphp.vulnweb.com/index.zip",
+          "nodeName": "http://testphp.vulnweb.com/index.zip",
+          "method": "GET",
+          "param": "",
+          "attack": "http://testphp.vulnweb.com/index.zip",
+          "evidence": "",
+          "otherinfo": "A backup of [http://testphp.vulnweb.com/index.php] is available at [http://testphp.vulnweb.com/index.zip]"
+        }
+      ]
+    },
+    {
+      "severity": "Medium",
+      "name": "Content Security Policy (CSP) Header Not Set",
+      "description": "<p>Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks, including Cross Site Scripting (XSS) and data injection attacks. These attacks are used for everything from data theft to site defacement or distribution of malware. CSP provides a set of standard HTTP headers that allow website owners to declare approved sources of content that browsers should be allowed to load on that page \u2014 covered types are JavaScript, CSS, HTML frames, fonts, images and embeddable objects such as Java applets, ActiveX, audio and video files.</p>",
+      "solution": "<p>Ensure that your web server, application server, load balancer, etc. is configured to set the Content-Security-Policy header.</p>",
+      "count": 5,
+      "instances": [
+        {
+          "id": "2",
+          "uri": "http://testphp.vulnweb.com/",
+          "nodeName": "http://testphp.vulnweb.com/",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "27",
+          "uri": "http://testphp.vulnweb.com/categories.php",
+          "nodeName": "http://testphp.vulnweb.com/categories.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "49",
+          "uri": "http://testphp.vulnweb.com/index.php",
+          "nodeName": "http://testphp.vulnweb.com/index.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "12",
+          "uri": "http://testphp.vulnweb.com/robots.txt",
+          "nodeName": "http://testphp.vulnweb.com/robots.txt",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "13",
+          "uri": "http://testphp.vulnweb.com/sitemap.xml",
+          "nodeName": "http://testphp.vulnweb.com/sitemap.xml",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        }
+      ]
+    },
+    {
+      "severity": "Medium",
+      "name": "HTTP Only Site",
+      "description": "<p>The site is only served under HTTP and not HTTPS.</p>",
+      "solution": "<p>Configure your web or application server to use SSL (https).</p>",
+      "count": 1,
+      "instances": [
+        {
+          "id": "169",
+          "uri": "http://testphp.vulnweb.com/hpp/?pp=12",
+          "nodeName": "https://testphp.vulnweb.com/hpp/",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": "Failed to connect.\nZAP attempted to connect via: https://testphp.vulnweb.com/hpp/"
+        }
+      ]
+    },
+    {
+      "severity": "Medium",
+      "name": "Missing Anti-clickjacking Header",
+      "description": "<p>The response does not protect against 'ClickJacking' attacks. It should include either Content-Security-Policy with 'frame-ancestors' directive or X-Frame-Options.</p>",
+      "solution": "<p>Modern Web browsers support the Content-Security-Policy and X-Frame-Options HTTP headers. Ensure one of them is set on all web pages returned by your site/app.</p><p>If you expect the page to be framed only by pages on your server (e.g. it's part of a FRAMESET) then you'll want to use SAMEORIGIN, otherwise if you never expect the page to be framed, you should use DENY. Alternatively consider implementing Content Security Policy's \"frame-ancestors\" directive.</p>",
+      "count": 5,
+      "instances": [
+        {
+          "id": "0",
+          "uri": "http://testphp.vulnweb.com/",
+          "nodeName": "http://testphp.vulnweb.com/",
+          "method": "GET",
+          "param": "x-frame-options",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "47",
+          "uri": "http://testphp.vulnweb.com/artists.php",
+          "nodeName": "http://testphp.vulnweb.com/artists.php",
+          "method": "GET",
+          "param": "x-frame-options",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "23",
+          "uri": "http://testphp.vulnweb.com/categories.php",
+          "nodeName": "http://testphp.vulnweb.com/categories.php",
+          "method": "GET",
+          "param": "x-frame-options",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "68",
+          "uri": "http://testphp.vulnweb.com/disclaimer.php",
+          "nodeName": "http://testphp.vulnweb.com/disclaimer.php",
+          "method": "GET",
+          "param": "x-frame-options",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "46",
+          "uri": "http://testphp.vulnweb.com/index.php",
+          "nodeName": "http://testphp.vulnweb.com/index.php",
+          "method": "GET",
+          "param": "x-frame-options",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        }
+      ]
+    },
+    {
+      "severity": "Medium",
+      "name": "XSLT Injection",
+      "description": "<p>Injection using XSL transformations may be possible, and may allow an attacker to read system information, read and write files, or execute arbitrary code.</p>",
+      "solution": "<p>Sanitize and analyze every user input coming from any client-side.</p>",
+      "count": 2,
+      "instances": [
+        {
+          "id": "170",
+          "uri": "http://testphp.vulnweb.com/showimage.php?file=%3Cxsl%3Avalue-of+select%3D%22document%28%27http%3A%2F%2Ftestphp.vulnweb.com%3A22%27%29%22%2F%3E",
+          "nodeName": "http://testphp.vulnweb.com/showimage.php (file)",
+          "method": "GET",
+          "param": "file",
+          "attack": "<xsl:value-of select=\"document('http://testphp.vulnweb.com:22')\"/>",
+          "evidence": "failed to open stream",
+          "otherinfo": "Port scanning may be possible."
+        },
+        {
+          "id": "171",
+          "uri": "http://testphp.vulnweb.com/showimage.php?file=%3Cxsl%3Avalue-of+select%3D%22document%28%27http%3A%2F%2Ftestphp.vulnweb.com%3A22%27%29%22%2F%3E&size=160",
+          "nodeName": "http://testphp.vulnweb.com/showimage.php (file,size)",
+          "method": "GET",
+          "param": "file",
+          "attack": "<xsl:value-of select=\"document('http://testphp.vulnweb.com:22')\"/>",
+          "evidence": "failed to open stream",
+          "otherinfo": "Port scanning may be possible."
+        }
+      ]
+    },
+    {
+      "severity": "Low",
+      "name": "Cross-Origin-Embedder-Policy Header Missing or Invalid",
+      "description": "<p>Cross-Origin-Embedder-Policy header is a response header that prevents a document from loading any cross-origin resources that don't explicitly grant the document permission (using CORP or CORS).</p>",
+      "solution": "<p>Ensure that the application/web server sets the Cross-Origin-Embedder-Policy header appropriately, and that it sets the Cross-Origin-Embedder-Policy header to 'require-corp' for documents.</p><p>If possible, ensure that the end user uses a standards-compliant and modern web browser that supports the Cross-Origin-Embedder-Policy header (https://caniuse.com/mdn-http_headers_cross-origin-embedder-policy).</p>",
+      "count": 3,
+      "instances": [
+        {
+          "id": "10",
+          "uri": "http://testphp.vulnweb.com/",
+          "nodeName": "http://testphp.vulnweb.com/",
+          "method": "GET",
+          "param": "Cross-Origin-Embedder-Policy",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "44",
+          "uri": "http://testphp.vulnweb.com/categories.php",
+          "nodeName": "http://testphp.vulnweb.com/categories.php",
+          "method": "GET",
+          "param": "Cross-Origin-Embedder-Policy",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "61",
+          "uri": "http://testphp.vulnweb.com/index.php",
+          "nodeName": "http://testphp.vulnweb.com/index.php",
+          "method": "GET",
+          "param": "Cross-Origin-Embedder-Policy",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        }
+      ]
+    },
+    {
+      "severity": "Low",
+      "name": "Cross-Origin-Opener-Policy Header Missing or Invalid",
+      "description": "<p>Cross-Origin-Opener-Policy header is a response header that allows a site to control if others included documents share the same browsing context. Sharing the same browsing context with untrusted documents might lead to data leak.</p>",
+      "solution": "<p>Ensure that the application/web server sets the Cross-Origin-Opener-Policy header appropriately, and that it sets the Cross-Origin-Opener-Policy header to 'same-origin' for documents.</p><p>'same-origin-allow-popups' is considered as less secured and should be avoided.</p><p>If possible, ensure that the end user uses a standards-compliant and modern web browser that supports the Cross-Origin-Opener-Policy header (https://caniuse.com/mdn-http_headers_cross-origin-opener-policy).</p>",
+      "count": 3,
+      "instances": [
+        {
+          "id": "11",
+          "uri": "http://testphp.vulnweb.com/",
+          "nodeName": "http://testphp.vulnweb.com/",
+          "method": "GET",
+          "param": "Cross-Origin-Opener-Policy",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "45",
+          "uri": "http://testphp.vulnweb.com/categories.php",
+          "nodeName": "http://testphp.vulnweb.com/categories.php",
+          "method": "GET",
+          "param": "Cross-Origin-Opener-Policy",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "62",
+          "uri": "http://testphp.vulnweb.com/index.php",
+          "nodeName": "http://testphp.vulnweb.com/index.php",
+          "method": "GET",
+          "param": "Cross-Origin-Opener-Policy",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        }
+      ]
+    },
+    {
+      "severity": "Low",
+      "name": "Cross-Origin-Resource-Policy Header Missing or Invalid",
+      "description": "<p>Cross-Origin-Resource-Policy header is an opt-in header designed to counter side-channels attacks like Spectre. Resource should be specifically set as shareable amongst different origins.</p>",
+      "solution": "<p>Ensure that the application/web server sets the Cross-Origin-Resource-Policy header appropriately, and that it sets the Cross-Origin-Resource-Policy header to 'same-origin' for all web pages.</p><p>'same-site' is considered as less secured and should be avoided.</p><p>If resources must be shared, set the header to 'cross-origin'.</p><p>If possible, ensure that the end user uses a standards-compliant and modern web browser that supports the Cross-Origin-Resource-Policy header (https://caniuse.com/mdn-http_headers_cross-origin-resource-policy).</p>",
+      "count": 3,
+      "instances": [
+        {
+          "id": "9",
+          "uri": "http://testphp.vulnweb.com/",
+          "nodeName": "http://testphp.vulnweb.com/",
+          "method": "GET",
+          "param": "Cross-Origin-Resource-Policy",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "43",
+          "uri": "http://testphp.vulnweb.com/categories.php",
+          "nodeName": "http://testphp.vulnweb.com/categories.php",
+          "method": "GET",
+          "param": "Cross-Origin-Resource-Policy",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "60",
+          "uri": "http://testphp.vulnweb.com/index.php",
+          "nodeName": "http://testphp.vulnweb.com/index.php",
+          "method": "GET",
+          "param": "Cross-Origin-Resource-Policy",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        }
+      ]
+    },
+    {
+      "severity": "Low",
+      "name": "In Page Banner Information Leak",
+      "description": "<p>The server returned a version banner string in the response content. Such information leaks may allow attackers to further target specific issues impacting the product and version in use.</p>",
+      "solution": "<p>Configure the server to prevent such information leaks. For example:</p><p>Under Tomcat this is done via the \"server\" directive and implementation of custom error pages.</p><p>Under Apache this is done via the \"ServerSignature\" and \"ServerTokens\" directives.</p>",
+      "count": 3,
+      "instances": [
+        {
+          "id": "122",
+          "uri": "http://testphp.vulnweb.com/high",
+          "nodeName": "http://testphp.vulnweb.com/high",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "nginx/1.19.0",
+          "otherinfo": "There is a chance that the highlight in the finding is on a value in the headers, versus the actual matched string in the response body."
+        },
+        {
+          "id": "14",
+          "uri": "http://testphp.vulnweb.com/robots.txt",
+          "nodeName": "http://testphp.vulnweb.com/robots.txt",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "nginx/1.19.0",
+          "otherinfo": "There is a chance that the highlight in the finding is on a value in the headers, versus the actual matched string in the response body."
+        },
+        {
+          "id": "15",
+          "uri": "http://testphp.vulnweb.com/sitemap.xml",
+          "nodeName": "http://testphp.vulnweb.com/sitemap.xml",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "nginx/1.19.0",
+          "otherinfo": "There is a chance that the highlight in the finding is on a value in the headers, versus the actual matched string in the response body."
+        }
+      ]
+    },
+    {
+      "severity": "Low",
+      "name": "Permissions Policy Header Not Set",
+      "description": "<p>Permissions Policy Header is an added layer of security that helps to restrict from unauthorized access or usage of browser/client features by web resources. This policy ensures the user privacy by limiting or specifying the features of the browsers can be used by the web resources. Permissions Policy provides a set of standard HTTP headers that allow website owners to limit which features of browsers can be used by the page such as camera, microphone, location, full screen etc.</p>",
+      "solution": "<p>Ensure that your web server, application server, load balancer, etc. is configured to set the Permissions-Policy header.</p>",
+      "count": 5,
+      "instances": [
+        {
+          "id": "8",
+          "uri": "http://testphp.vulnweb.com/",
+          "nodeName": "http://testphp.vulnweb.com/",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "37",
+          "uri": "http://testphp.vulnweb.com/categories.php",
+          "nodeName": "http://testphp.vulnweb.com/categories.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "59",
+          "uri": "http://testphp.vulnweb.com/index.php",
+          "nodeName": "http://testphp.vulnweb.com/index.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "21",
+          "uri": "http://testphp.vulnweb.com/robots.txt",
+          "nodeName": "http://testphp.vulnweb.com/robots.txt",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        },
+        {
+          "id": "19",
+          "uri": "http://testphp.vulnweb.com/sitemap.xml",
+          "nodeName": "http://testphp.vulnweb.com/sitemap.xml",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": ""
+        }
+      ]
+    },
+    {
+      "severity": "Low",
+      "name": "Server Leaks Information via \"X-Powered-By\" HTTP Response Header Field(s)",
+      "description": "<p>The web/application server is leaking information via one or more \"X-Powered-By\" HTTP response headers. Access to such information may facilitate attackers identifying other frameworks/components your web application is reliant upon and the vulnerabilities such components may be subject to.</p>",
+      "solution": "<p>Ensure that your web server, application server, load balancer, etc. is configured to suppress \"X-Powered-By\" headers.</p>",
+      "count": 5,
+      "instances": [
+        {
+          "id": "6",
+          "uri": "http://testphp.vulnweb.com/",
+          "nodeName": "http://testphp.vulnweb.com/",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "X-Powered-By: PHP/5.6.40-38+ubuntu20.04.1+deb.sury.org+1",
+          "otherinfo": ""
+        },
+        {
+          "id": "65",
+          "uri": "http://testphp.vulnweb.com/artists.php",
+          "nodeName": "http://testphp.vulnweb.com/artists.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "X-Powered-By: PHP/5.6.40-38+ubuntu20.04.1+deb.sury.org+1",
+          "otherinfo": ""
+        },
+        {
+          "id": "35",
+          "uri": "http://testphp.vulnweb.com/categories.php",
+          "nodeName": "http://testphp.vulnweb.com/categories.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "X-Powered-By: PHP/5.6.40-38+ubuntu20.04.1+deb.sury.org+1",
+          "otherinfo": ""
+        },
+        {
+          "id": "79",
+          "uri": "http://testphp.vulnweb.com/disclaimer.php",
+          "nodeName": "http://testphp.vulnweb.com/disclaimer.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "X-Powered-By: PHP/5.6.40-38+ubuntu20.04.1+deb.sury.org+1",
+          "otherinfo": ""
+        },
+        {
+          "id": "56",
+          "uri": "http://testphp.vulnweb.com/index.php",
+          "nodeName": "http://testphp.vulnweb.com/index.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "X-Powered-By: PHP/5.6.40-38+ubuntu20.04.1+deb.sury.org+1",
+          "otherinfo": ""
+        }
+      ]
+    },
+    {
+      "severity": "Low",
+      "name": "Server Leaks Version Information via \"Server\" HTTP Response Header Field",
+      "description": "<p>The web/application server is leaking version information via the \"Server\" HTTP response header. Access to such information may facilitate attackers identifying other vulnerabilities your web/application server is subject to.</p>",
+      "solution": "<p>Ensure that your web server, application server, load balancer, etc. is configured to suppress the \"Server\" header or provide generic details.</p>",
+      "count": 5,
+      "instances": [
+        {
+          "id": "4",
+          "uri": "http://testphp.vulnweb.com/",
+          "nodeName": "http://testphp.vulnweb.com/",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "nginx/1.19.0",
+          "otherinfo": ""
+        },
+        {
+          "id": "32",
+          "uri": "http://testphp.vulnweb.com/categories.php",
+          "nodeName": "http://testphp.vulnweb.com/categories.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "nginx/1.19.0",
+          "otherinfo": ""
+        },
+        {
+          "id": "52",
+          "uri": "http://testphp.vulnweb.com/index.php",
+          "nodeName": "http://testphp.vulnweb.com/index.php",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "nginx/1.19.0",
+          "otherinfo": ""
+        },
+        {
+          "id": "18",
+          "uri": "http://testphp.vulnweb.com/robots.txt",
+          "nodeName": "http://testphp.vulnweb.com/robots.txt",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "nginx/1.19.0",
+          "otherinfo": ""
+        },
+        {
+          "id": "16",
+          "uri": "http://testphp.vulnweb.com/sitemap.xml",
+          "nodeName": "http://testphp.vulnweb.com/sitemap.xml",
+          "method": "GET",
+          "param": "",
+          "attack": "",
+          "evidence": "nginx/1.19.0",
+          "otherinfo": ""
+        }
+      ]
+    },
+    {
+      "severity": "Low",
+      "name": "X-Content-Type-Options Header Missing",
+      "description": "<p>The Anti-MIME-Sniffing header X-Content-Type-Options was not set to 'nosniff'. This allows older versions of Internet Explorer and Chrome to perform MIME-sniffing on the response body, potentially causing the response body to be interpreted and displayed as a content type other than the declared content type. Current (early 2014) and legacy versions of Firefox will use the declared content type (if one is set), rather than performing MIME-sniffing.</p>",
+      "solution": "<p>Ensure that the application/web server sets the Content-Type header appropriately, and that it sets the X-Content-Type-Options header to 'nosniff' for all web pages.</p><p>If possible, ensure that the end user uses a standards-compliant and modern web browser that does not perform MIME-sniffing at all, or that can be directed by the web application/web server to not perform MIME-sniffing.</p>",
+      "count": 5,
+      "instances": [
+        {
+          "id": "5",
+          "uri": "http://testphp.vulnweb.com/",
+          "nodeName": "http://testphp.vulnweb.com/",
+          "method": "GET",
+          "param": "x-content-type-options",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+        },
+        {
+          "id": "64",
+          "uri": "http://testphp.vulnweb.com/artists.php",
+          "nodeName": "http://testphp.vulnweb.com/artists.php",
+          "method": "GET",
+          "param": "x-content-type-options",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+        },
+        {
+          "id": "33",
+          "uri": "http://testphp.vulnweb.com/categories.php",
+          "nodeName": "http://testphp.vulnweb.com/categories.php",
+          "method": "GET",
+          "param": "x-content-type-options",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+        },
+        {
+          "id": "77",
+          "uri": "http://testphp.vulnweb.com/disclaimer.php",
+          "nodeName": "http://testphp.vulnweb.com/disclaimer.php",
+          "method": "GET",
+          "param": "x-content-type-options",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+        },
+        {
+          "id": "53",
+          "uri": "http://testphp.vulnweb.com/index.php",
+          "nodeName": "http://testphp.vulnweb.com/index.php",
+          "method": "GET",
+          "param": "x-content-type-options",
+          "attack": "",
+          "evidence": "",
+          "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+        }
+      ]
+    }
+  ]
+}
