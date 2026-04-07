@@ -12,7 +12,7 @@ That is the whole job.
 
 ## Start Here
 
-If you are a junior engineer or intern, use this order:
+Use this order when creating a new plugin:
 
 1. Read this README fully once.
 2. Open one sample plugin that looks similar to your tool.
@@ -50,25 +50,9 @@ Your plugin must:
 
 ## Repository Layout
 
-The repo is organized by data type first, then by tool family.
+Place new plugins under `Plugins/` and follow the closest existing category and naming pattern already used in the repository.
 
-```text
-Plugins/
-├── Compliance/
-│   ├── Nessus/
-│   └── Cloud/AWS/SecurityHub/
-└── VAPT/
-    ├── VA/
-    ├── SAST/
-    ├── DAST/
-    ├── SCA/
-    ├── Cloud/AWS/Inspector/
-    ├── AD/PurpleKnight/
-    ├── EDR/Crowdstrike/
-    └── BugBounty/YesWeHack/
-```
-
-Use the closest existing category. If your tool is:
+In practice:
 
 - a network or infrastructure scanner, start under `Plugins/VAPT/VA/`
 - a code scanner, start under `Plugins/VAPT/SAST/`
