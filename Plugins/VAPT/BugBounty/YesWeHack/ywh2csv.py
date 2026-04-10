@@ -10,7 +10,7 @@ import argparse
 import logging
 import sys
 import os
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 
 # Try to import dotenv, but make it optional
 try:
@@ -266,28 +266,183 @@ def clean_scope(scope: str) -> str:
     return cleaned
 
 
-def format_description(description: str, max_length: int = 5000) -> str:
+def _format_table_for_pre(rows: List[List[str]]) -> str:
     """
-    Format description for CSV export
+    Format rows as a text table wrapped in <pre> tags.
+
+    Each row is joined with ' | ' (pipe-space-pipe).
+    No column-width alignment — ThreatVault collapses multi-space padding
+    during CSV import anyway.
 
     Args:
-        description: Raw description text
-        max_length: Maximum length for description
+        rows: List of rows, each row a list of cell strings (header row first).
 
     Returns:
-        Formatted description with newlines replaced
+        Text table inside <pre>...</pre>.
+    """
+    if not rows:
+        return "<pre>\n</pre>"
+
+    lines = []
+    for row_idx, row in enumerate(rows):
+        lines.append(" | ".join(row))
+        if row_idx == 0:
+            lines.append("")
+
+    return "<pre>\n" + "\n".join(lines) + "\n</pre>"
+
+
+def _convert_tables_to_pre(text: str) -> str:
+    """
+    Convert HTML tables to pre-formatted text blocks.
+
+    ThreatVault bleach filter does NOT include table tags (<table>, <tr>, <td>, etc.)
+    so they get stripped entirely. Instead of losing table structure, convert each row
+    to a pipe-delimited line inside a <pre> block with proper column alignment.
+
+    Args:
+        text: HTML text potentially containing tables
+
+    Returns:
+        HTML with tables converted to <pre> blocks
+    """
+    import re
+
+    def convert_table(m):
+        """Callback to convert a single table HTML block to a pre-formatted text block."""
+        table_html = m.group(0)
+
+        # Remove all <br/> tags — they are just visual spacers in YesWeHack HTML
+        # and they cause the header cell pattern to incorrectly span across tags.
+        table_html = re.sub(r'<br\s*/?>', '', table_html)
+
+        # Extract header cells using negative lookahead to prevent matching
+        # 'th' inside tag names like <thead> or </thead>.
+        header_cells = re.findall(r'<th(?![a-z/])([^>]*)>(.*?)</th>', table_html, re.DOTALL | re.IGNORECASE)
+        clean_headers = []
+        for attrs, content in header_cells:
+            clean = re.sub(r'<[^>]+>', '', content, flags=re.DOTALL).strip()
+            if clean:
+                clean_headers.append(clean)
+
+        # Extract all table rows
+        rows = re.findall(r'<tr[^>]*>(.*?)</tr>', table_html, re.DOTALL | re.IGNORECASE)
+
+        data_rows = []
+        for row_content in rows:
+            cells = re.findall(r'<td(?![a-z/])([^>]*)>(.*?)</td>', row_content, re.DOTALL | re.IGNORECASE)
+            if cells:
+                clean_cells = []
+                for attrs, content in cells:
+                    clean = re.sub(r'<[^>]+>', '', content, flags=re.DOTALL).strip()
+                    if clean:
+                        clean_cells.append(clean)
+                if clean_cells:
+                    data_rows.append(clean_cells)
+
+        all_rows = [clean_headers] + data_rows if clean_headers else data_rows
+        if not all_rows:
+            return ''
+
+        return _format_table_for_pre(all_rows)
+
+    # Match full <table>...</table> blocks and replace with pre blocks.
+    return re.sub(r'<table[^>]*>.*?</table>', convert_table, text, flags=re.DOTALL | re.IGNORECASE)
+
+
+def _normalize_block_html(text: str) -> str:
+    """
+    Normalize HTML by removing newlines between block-level tags.
+
+    YesWeHack HTML has \\n between every tag. Without cleanup, these become
+    <br/> creating excessive spacing. This removes newlines that are purely
+    structural (between block tags) while preserving meaningful whitespace.
+
+    IMPORTANT: This function must NOT convert \\n to <br/> inside <pre> blocks,
+    because _convert_tables_to_pre generates <pre> blocks with intentional \\n.
+
+    Args:
+        text: HTML text with potentially excessive newlines between tags
+
+    Returns:
+        HTML with normalized whitespace between block-level tags
+    """
+    import re
+
+    # Split by <pre>...</pre> blocks and process non-pre parts separately
+    parts = re.split(r'(<pre>.*?</pre>)', text, flags=re.DOTALL)
+    result_parts = []
+
+    for part in parts:
+        if part.startswith('<pre>') and part.endswith('</pre>'):
+            result_parts.append(part)
+        else:
+            for tag in ['</p>', '<p>', '</li>', '<li>', '</ol>', '<ol>', '</ul>', '<ul>',
+                        '</h1>', '</h2>', '</h3>', '</h4>', '<h1>', '<h3>', '<h4>',
+                        '</blockquote>', '<blockquote>', '</code>']:
+                part = part.replace(f'\n{tag}', tag)
+                part = part.replace(f'{tag}\n', tag)
+
+            part = re.sub(r'\n{3,}', '\n\n', part)
+            part = part.replace('\n', '<br/>')
+            part = re.sub(r'(<br/>)+', '<br/>', part)
+            part = re.sub(r'^<br/>', '', part)
+
+            result_parts.append(part)
+
+    text = ''.join(result_parts)
+    text = text.strip()
+
+    return text
+
+
+def format_description(description: str) -> str:
+    """
+    Format description for CSV export.
+
+    YesWeHack HTML has issues that cause visual problems after ThreatVault's
+    bleach/safe_html_with_br filter:
+    1. Tables (<table>, <tr>, <td>) are NOT in SAFE_TAGS — stripped entirely
+    2. h2 and h3 are NOT in SAFE_TAGS — stripped, losing heading semantics
+    3. Newlines between every tag create excessive <br/> after \\n→<br/> conversion
+
+    This function:
+    - Converts HTML tables to <pre> blocks with pipe-delimited columns
+    - Replaces <h2> and <h3> with <p><strong> (both in SAFE_TAGS)
+    - Removes newlines between block-level tags before <br/> conversion
+
+    Args:
+        description: Raw description text (HTML from YesWeHack)
+
+    Returns:
+        Formatted description safe for ThreatVault rendering
     """
     if not description:
         return ""
 
-    # Replace newlines with <br/> for HTML display
-    formatted = str(description).replace('\n', '<br/>')
+    text = str(description)
 
-    # Truncate if too long
-    if len(formatted) > max_length:
-        formatted = formatted[:max_length] + '...'
+    # Convert HTML tables to pre-formatted blocks (bleach strips table tags)
+    text = _convert_tables_to_pre(text)
 
-    return formatted
+    # Replace <h2> and <h3> with <p><strong> (both bleach-safe)
+    # Use (.*?) with re.DOTALL to handle h2/h3 with nested HTML tags (e.g., <h3>text <code>code</code> text</h3>)
+    import re
+    text = re.sub(
+        r'<h2>(.*?)</h2>',
+        lambda m: f'<p><strong>{re.sub(r"<[^>]+>", "", m.group(1)).strip()}</strong></p>',
+        text, flags=re.DOTALL
+    )
+    text = re.sub(
+        r'<h3>(.*?)</h3>',
+        lambda m: f'<p><strong>{re.sub(r"<[^>]+>", "", m.group(1)).strip()}</strong></p>',
+        text, flags=re.DOTALL
+    )
+
+    # Normalize block-level tag whitespace and convert newlines
+    text = _normalize_block_html(text)
+
+    return text
 
 
 def should_include_report(report: Dict) -> bool:
@@ -342,7 +497,106 @@ def should_include_report(report: Dict) -> bool:
         return False
 
 
-def map_report_to_csv_row(report: Dict, detailed_report: Optional[Dict] = None) -> Optional[Dict]:
+def extract_remediation(description_html: str, suggestions: Any, bug_type: Dict) -> str:
+    """
+    Extract per-report remediation from <h2>Remediation</h2> section in description.
+
+    Only looks for the Remediation h2 section. Does NOT use suggestions or bug_type
+    fallbacks as these provide generic/repeated information rather than per-report fixes.
+    """
+    import re
+
+    # Try to extract <h2>...Remediation/Recommendation...</h2> section from description_html
+    # Handles multilingual: English (Remediation, Recommendation) and French (Remédiation, Remèdiation)
+    if description_html:
+        pattern = r'<h2>[^<]*(?:[Rr]em[eéè]d[iI]ation|[Rr]ecommendation)[^<]*</h2>(.*?)(?=<h2|$)'
+        match = re.search(pattern, description_html, re.DOTALL | re.IGNORECASE)
+        if match:
+            remediation_html = match.group(1).strip()
+            if remediation_html:
+                return _normalize_block_html(remediation_html)
+
+    # No Remediation/Recommendation h2 section found — return hardcoded message
+    return 'No Remediation Provided by Hunter. If you need assistance, kindly contact purplesec@paynet.my'
+
+
+def _build_report_metadata(source: Dict, program_slug: str = '') -> str:
+    """
+    Build a metadata block with Report ID, Report URL, and CVSS from YesWeHack report data.
+
+    Args:
+        source: YesWeHack report dict (from detailed or summary)
+        program_slug: Program slug for constructing report URL if not provided in source
+
+    Returns:
+        HTML string with metadata fields, or empty string if no metadata available
+    """
+    parts = []
+
+    # Report ID
+    local_id = source.get('local_id', '')
+    if local_id:
+        parts.append(f'<p><strong>Report ID:</strong> {local_id}</p>')
+
+    # Report URL — try direct field first, then construct from program slug
+    # Priority: href > url > _program_slug + numeric id (NOT local_id)
+    pg_slug = source.get('_program_slug') or program_slug or ''
+    numeric_id = source.get('id', '')  # numeric YesWeHack id, e.g. '755474'
+    report_url = ''
+    if source.get('href'):
+        report_url = source.get('href')
+    elif source.get('url'):
+        report_url = source.get('url')
+    elif numeric_id:
+        # YesWeHack uses vulnerability-center, not programs/{slug}
+        report_url = f'https://yeswehack.com/vulnerability-center/reports/{numeric_id}'
+    if report_url:
+        if source.get('href'):
+            parts.append(f'<p><strong>Report URL:</strong> <a href="{report_url}">{report_url}</a></p>')
+        else:
+            parts.append(f'<p><strong>Report URL:</strong> {report_url}</p>')
+
+    # CVSS score and vector
+    cvss = source.get('cvss', {})
+    if isinstance(cvss, dict) and cvss:
+        cvss_parts = []
+        # Numeric score (e.g., 9.8)
+        score = cvss.get('score') or cvss.get('cvss_score') or cvss.get('value')
+        if score:
+            cvss_parts.append(str(score))
+
+        # Full vector string (e.g., CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N)
+        vector = cvss.get('vector') or cvss.get('cvss_vector') or cvss.get('full_vector')
+        if vector:
+            cvss_parts.append(vector)
+        elif score:
+            # Construct vector from individual components if full vector not available
+            abbrev = {
+                'attack_vector': 'AV', 'attackcomplexity': 'AC',
+                'privileges_required': 'PR', 'user_interaction': 'UI',
+                'scope': 'S', 'confidentiality_impact': 'C',
+                'integrity_impact': 'I', 'availability_impact': 'A',
+            }
+            metric_keys = ['attack_vector', 'attackcomplexity', 'privileges_required',
+                          'user_interaction', 'scope', 'confidentiality_impact',
+                          'integrity_impact', 'availability_impact']
+            vector_parts = []
+            for key in metric_keys:
+                val = cvss.get(key, cvss.get(key.replace('_', ''), ''))
+                if val:
+                    ab = abbrev.get(key, key[:2].upper())
+                    vector_parts.append(f'{ab}:{val[0].upper()}' if val else '')
+            if vector_parts:
+                vector_str = 'CVSS:3.1/' + '/'.join(vector_parts)
+                cvss_parts.append(vector_str)
+
+        if cvss_parts:
+            parts.append(f'<p><strong>CVSS:</strong> {" ".join(cvss_parts)}</p>')
+
+    return ''.join(parts)
+
+
+def map_report_to_csv_row(report: Dict, detailed_report: Optional[Dict] = None, program_slug: str = '') -> Optional[Dict]:
     """
     Map YesWeHack report to ThreatVault CSV format
 
@@ -355,6 +609,12 @@ def map_report_to_csv_row(report: Dict, detailed_report: Optional[Dict] = None) 
     """
     # Use detailed report if available, otherwise use summary
     source = detailed_report if detailed_report else report
+    # Carry over _program_slug AND numeric id from summary report (needed for URL construction)
+    if detailed_report:
+        if report.get('_program_slug'):
+            source = {**detailed_report, '_program_slug': report['_program_slug']}
+        if report.get('id'):
+            source = {**source, 'id': report['id']}
 
     # Extract fields from report
     local_id = source.get('local_id', '')
@@ -373,15 +633,14 @@ def map_report_to_csv_row(report: Dict, detailed_report: Optional[Dict] = None) 
     if not description:
         description = source.get('description', '')
 
-    # Get remediation_link for Solution field
-    # First try root level
-    remediation_link = source.get('remediation_link', '')
-
-    # If not found, try nested in bug_type object
-    if not remediation_link:
-        bug_type = source.get('bug_type', {})
-        if isinstance(bug_type, dict):
-            remediation_link = bug_type.get('remediation_link', '')
+    # Extract per-report remediation (not generic bug_type link)
+    # Uses: description_html <h2>Remediation</h2> section, then suggestions, then bug_type description
+    suggestions = source.get('suggestions')
+    bug_type = source.get('bug_type', {})
+    if isinstance(bug_type, dict):
+        remediation = extract_remediation(description, suggestions, bug_type)
+    else:
+        remediation = extract_remediation(description, suggestions, {})
 
     # Get scope for Host field
     scope = source.get('scope', '')
@@ -397,6 +656,15 @@ def map_report_to_csv_row(report: Dict, detailed_report: Optional[Dict] = None) 
     if not description:
         logger.warning(f"Report {local_id} has no description_html or description field")
 
+    # Build metadata block (Report ID, URL, CVSS) and prepend to description
+    # Pass 'report' (has _program_slug) not 'source' (detailed_report) — _program_slug
+    # is only set on the summary report, not the detailed response
+    metadata = _build_report_metadata(source, program_slug)
+    if not metadata:
+        # Try getting _program_slug from the original report dict
+        metadata = _build_report_metadata(report, program_slug)
+    full_description = metadata + description if description else metadata
+
     # Map to ThreatVault format
     csv_row = {
         'CVE': local_id,  # Map bug bounty report ID to CVE field for tracking
@@ -404,8 +672,8 @@ def map_report_to_csv_row(report: Dict, detailed_report: Optional[Dict] = None) 
         'Host': host,  # Extracted and cleaned from scope field
         'Port': '0',  # Use 0 for web applications (will be converted to int by plugin)
         'Name': title,
-        'Description': format_description(description),
-        'Solution': format_description(remediation_link) if remediation_link else format_description(description),  # Use remediation_link, fallback to description
+        'Description': format_description(full_description),
+        'Solution': remediation,  # Per-report remediation: extracted from description_html, suggestions, or bug_type
         'Plugin Output': '',  # Leave empty as per requirement
         'VPR Score': ''  # Not provided by YesWeHack, empty string
     }
@@ -413,7 +681,7 @@ def map_report_to_csv_row(report: Dict, detailed_report: Optional[Dict] = None) 
     return csv_row
 
 
-def export_reports_to_csv(reports: List[Dict], output_file: str, fetch_details: bool = True, apply_filter: bool = True) -> bool:
+def export_reports_to_csv(reports: List[Dict], output_file: str, fetch_details: bool = True, apply_filter: bool = True, program_slug: str = '') -> bool:
     """
     Export reports to CSV file in ThreatVault format
 
@@ -422,6 +690,7 @@ def export_reports_to_csv(reports: List[Dict], output_file: str, fetch_details: 
         output_file: Output CSV file path
         fetch_details: If True, fetch full details for each report (default: True)
         apply_filter: If True, filter by workflow_state and fix_verification_status (default: True)
+        program_slug: Program slug for constructing report URLs (optional)
 
     Returns:
         True if successful, False otherwise
@@ -469,7 +738,7 @@ def export_reports_to_csv(reports: List[Dict], output_file: str, fetch_details: 
                 continue
 
         # Map to CSV format
-        csv_row = map_report_to_csv_row(report, detailed_report)
+        csv_row = map_report_to_csv_row(report, detailed_report, program_slug)
         if csv_row:
             csv_rows.append(csv_row)
         else:
@@ -604,6 +873,9 @@ def main():
 
         reports = get_program_reports(program_slug)
         if reports:
+            # Tag each report with its program slug for URL construction
+            for r in reports:
+                r['_program_slug'] = program_slug
             all_reports.extend(reports)
             logger.info(f"Added {len(reports)} reports from {program_slug}")
         else:
