@@ -246,7 +246,7 @@ Output:       cve, risk, host, port, name, description, remediation, evidence, v
 | N/A | Port | `port` | **Integer** | ✅ | `0` |
 | `title` | Name | `name` | String | ✅ | `SQL Injection` |
 | `description_html` | Description | `description` | String | ✅ | `The application...` |
-| `remediation_link` | Solution | `remediation` | String | ✅ | `Use parameterized...` |
+| `<h2>Remediation</h2>` section | Solution | `remediation` | String | ✅ | `Use parameterized...` |
 | N/A | Plugin Output | `evidence` | String | ⚪ | `""` (empty) |
 | N/A | VPR Score | `vpr_score` | String | ⚪ | `""` (empty) |
 
@@ -509,10 +509,11 @@ For issues or questions:
 
 ---
 
-**Version**: 1.0.1
-**Last Updated**: 2025-11-26
+**Version**: 1.0.2
+**Last Updated**: 2026-04-13
 **Status**: Production Ready ✅
 
 **Changelog**:
+- v1.0.2: Extract per-report Remediation from `<h2>Remediation</h2>` HTML section (handles English and French); previously used `remediation_link` field which was rarely populated
 - v1.0.1: Fixed file type validation to accept both "csv" and "text/csv"
 - v1.0.0: Initial release with ywh2csv.py exporter and yeswehack.py plugin
