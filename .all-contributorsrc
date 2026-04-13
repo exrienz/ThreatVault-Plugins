@@ -1,0 +1,26 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "tangisaiah",
+      "name": "tangisaiah",
+      "avatar_url": "https://avatars.githubusercontent.com/u/24579059?v=4",
+      "profile": "https://github.com/tangisaiah",
+      "contributions": [
+        "plugin"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "skipCi": true,
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "projectName": "ThreatVault-Plugins",
+  "projectOwner": "exrienz"
+}
